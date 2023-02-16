@@ -33,7 +33,7 @@ func JavaSubString(s string, start int, end int) (string, error) {
 		return "", err
 	}
 	if start < 0 && end > l {
-		return "", errors.New("exceed string range")
+		return "", errors.New("exceed strutils range")
 	}
 	if end == -1 {
 		end = l
