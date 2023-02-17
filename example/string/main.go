@@ -8,7 +8,21 @@ import (
 
 func main() {
 	//javaLength()
-	quickString()
+	getChan()
+	//quickString()
+}
+
+func getChan() {
+	ch := make(chan int, 2)
+	ch <- 1
+	ch <- 2
+	close(ch)
+	v, c := <-ch
+	fmt.Println(v, c)
+	v, c = <-ch
+	fmt.Println(v, c)
+	v, c = <-ch
+	fmt.Println(v, c)
 }
 
 func javaLength() {

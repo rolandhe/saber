@@ -1,4 +1,4 @@
-package gconcur
+package gocc
 
 import (
 	"time"
