@@ -1,46 +1,48 @@
 package gocc
 
-import "sync/atomic"
-
-func NewSimpleExecutor(concurLevel uint32) Executor {
+func NewSimpleExecutor(concurLevel uint) Executor {
 	return &simpleExecutor{
-		concurLevel: int32(concurLevel),
+		concurLevel: concurLevel,
+		semaphore:   NewChanSemaphore(concurLevel),
+	}
+}
+
+func NewSimpleExecutorWithSemaphore(semaphore Semaphore) Executor {
+	return &simpleExecutor{
+		concurLevel: semaphore.GetTotal(),
+		semaphore:   semaphore,
 	}
 }
 
 type simpleExecutor struct {
-	concurLevel int32
-	counter     int32
+	concurLevel uint
+	semaphore   Semaphore
 }
 
 func (et *simpleExecutor) Execute(task Task) (*Future, bool) {
-	c := atomic.AddInt32(&et.counter, 1)
-	if c >= et.concurLevel {
-		atomic.AddInt32(&et.counter, -1)
+	if et.semaphore.Acquire() {
 		return nil, false
 	}
 	future := newFuture()
-	go runTask(task, future, &et.counter)
+	go runTask(task, future, et.semaphore)
 
 	return future, true
 }
 
 func (et *simpleExecutor) ExecuteInGroup(task Task, g *FutureGroup) (*Future, bool) {
-	c := atomic.AddInt32(&et.counter, 1)
-	if c >= et.concurLevel {
-		atomic.AddInt32(&et.counter, -1)
+	if et.semaphore.Acquire() {
 		return nil, false
 	}
 	future := newFutureWithGroup(g)
 	g.add(future)
-	go runTask(task, future, &et.counter)
+	go runTask(task, future, et.semaphore)
 	return future, true
 }
 
-func runTask(task Task, future *Future, counterAddr *int32) {
+func runTask(task Task, future *Future, concurrentLimit Semaphore) {
 	r, err := task()
 	future.ch <- &taskResult{r, err}
 	close(future.ch)
-	atomic.AddInt32(counterAddr, -1)
+	concurrentLimit.Release()
 	future.TryGet()
 }

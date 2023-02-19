@@ -1,22 +1,29 @@
 package gocc
 
 import (
-	"sync/atomic"
+	"log"
 	"time"
 )
 
+const waitTimeout = time.Second * 5
+
 type bufferedExecutor struct {
-	queue       BlockingQueue[*ExecTask]
-	concurLevel int32
-	counter     int32
+	queue BlockingQueue[*ExecTask]
 }
 
-func NewBufferedExecutor(queue BlockingQueue[*ExecTask], concurLevel uint32) Executor {
+func NewBufferedExecutor(queue BlockingQueue[*ExecTask], concurLevel uint) Executor {
 	executor := &bufferedExecutor{
-		queue:       queue,
-		concurLevel: int32(concurLevel),
+		queue: queue,
 	}
-	go dispatch(queue, &executor.counter, executor.concurLevel)
+	go dispatch(queue, NewChanSemaphore(concurLevel))
+	return executor
+}
+
+func NewBufferedExecutorWithSemaphore(queue BlockingQueue[*ExecTask], concurrentLimit Semaphore) Executor {
+	executor := &bufferedExecutor{
+		queue: queue,
+	}
+	go dispatch(queue, concurrentLimit)
 	return executor
 }
 
@@ -25,35 +32,37 @@ type ExecTask struct {
 	future *Future
 }
 
-func dispatch(q BlockingQueue[*ExecTask], counter *int32, limit int32) {
+func dispatch(q BlockingQueue[*ExecTask], concurrentLimit Semaphore) {
 	for {
-		elem, ok := q.PullTimeout(time.Second * 5)
+		elem, ok := q.PullTimeout(waitTimeout)
 		if !ok {
-			// todo log
+			log.Println("empty q, try to poll")
 			continue
 		}
-		c := atomic.AddInt32(counter, 1)
-		if c > limit {
-			for atomic.LoadInt32(counter) < limit {
-				time.Sleep(time.Millisecond * 2)
+		for {
+			if !concurrentLimit.AcquireTimeout(waitTimeout) {
+				log.Println("met concurrent limit, wait....")
+				continue
 			}
+			break
 		}
+
 		execTask := *(elem.v)
-		go runTask(execTask.task, execTask.future, counter)
+		go runTask(execTask.task, execTask.future, concurrentLimit)
 	}
 }
 
 func (be *bufferedExecutor) Execute(task Task) (*Future, bool) {
 	future := newFuture()
-	return be.tryOfferTask(task, future)
+	return be.tryToOfferTask(task, future)
 }
 
 func (be *bufferedExecutor) ExecuteInGroup(task Task, g *FutureGroup) (*Future, bool) {
 	future := newFutureWithGroup(g)
-	return be.tryOfferTask(task, future)
+	return be.tryToOfferTask(task, future)
 }
 
-func (be *bufferedExecutor) tryOfferTask(task Task, future *Future) (*Future, bool) {
+func (be *bufferedExecutor) tryToOfferTask(task Task, future *Future) (*Future, bool) {
 	ok := be.queue.Offer(&ExecTask{
 		task:   task,
 		future: future,

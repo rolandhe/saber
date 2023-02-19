@@ -51,81 +51,81 @@ type arrayBlockingQueue[T any] struct {
 	limit int
 }
 
-func (a *arrayBlockingQueue[T]) Offer(t T) bool {
-	a.Lock()
-	defer a.Unlock()
+func (aq *arrayBlockingQueue[T]) Offer(t T) bool {
+	aq.Lock()
+	defer aq.Unlock()
 
-	if !a.q.hasCap() {
+	if !aq.q.hasCap() {
 		return false
 	}
-	a.q.w(&Elem[T]{&t})
-	a.rc.Signal()
+	aq.q.w(&Elem[T]{&t})
+	aq.rc.Signal()
 	return true
 }
 
-func (a *arrayBlockingQueue[T]) OfferTimeout(t T, timeout time.Duration) bool {
-	a.Lock()
-	if a.q.hasCap() {
-		a.q.w(&Elem[T]{&t})
-		a.Unlock()
+func (aq *arrayBlockingQueue[T]) OfferTimeout(t T, timeout time.Duration) bool {
+	aq.Lock()
+	if aq.q.hasCap() {
+		aq.q.w(&Elem[T]{&t})
+		aq.Unlock()
 		return true
 	}
 	wt := int64(timeout)
 	hasCap := false
 	for !hasCap && wt > 0 {
 		start := time.Now().UnixNano()
-		a.wc.WaitWithTimeout(time.Duration(wt))
-		hasCap = a.q.hasCap()
+		aq.wc.WaitWithTimeout(time.Duration(wt))
+		hasCap = aq.q.hasCap()
 		if !hasCap {
 			cost := time.Now().UnixNano() - start
 			wt -= cost
 		}
 	}
 	if hasCap {
-		a.q.w(&Elem[T]{&t})
+		aq.q.w(&Elem[T]{&t})
 	}
-	a.Unlock()
-	a.rc.Signal()
+	aq.Unlock()
+	aq.rc.Signal()
 	return hasCap
 }
 
-func (a *arrayBlockingQueue[T]) Pull() (*Elem[T], bool) {
-	a.Lock()
-	defer a.Unlock()
+func (aq *arrayBlockingQueue[T]) Pull() (*Elem[T], bool) {
+	aq.Lock()
+	defer aq.Unlock()
 
-	if a.q.count() == 0 {
+	if aq.q.count() == 0 {
 		return nil, false
 	}
-	e := a.q.r()
-	a.wc.Signal()
+	e := aq.q.r()
+	aq.wc.Signal()
 	return e, true
 }
 
-func (a *arrayBlockingQueue[T]) PullTimeout(timeout time.Duration) (*Elem[T], bool) {
-	a.Lock()
-	if a.q.count() > 0 {
-		e := a.q.r()
-		a.Unlock()
-		a.wc.Signal()
-		return e, true
+func (aq *arrayBlockingQueue[T]) PullTimeout(timeout time.Duration) (*Elem[T], bool) {
+	aq.Lock()
+	if aq.q.count() > 0 {
+		elem := aq.q.r()
+		aq.Unlock()
+		aq.wc.Signal()
+		return elem, true
 	}
 	wt := int64(timeout)
 	hasElem := false
 	for !hasElem && wt > 0 {
 		start := time.Now().UnixNano()
-		a.wc.WaitWithTimeout(time.Duration(wt))
-		hasElem = a.q.count() > 0
+		aq.wc.WaitWithTimeout(time.Duration(wt))
+		hasElem = aq.q.count() > 0
 		if !hasElem {
 			cost := time.Now().UnixNano() - start
 			wt -= cost
 		}
 	}
-	var e *Elem[T]
+	var elem *Elem[T]
 	if hasElem {
-		e = a.q.r()
-		a.wc.Signal()
+		elem = aq.q.r()
+		aq.wc.Signal()
 	}
-	a.Unlock()
+	aq.Unlock()
 
-	return e, hasElem
+	return elem, hasElem
 }
