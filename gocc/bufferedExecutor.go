@@ -64,7 +64,7 @@ func dispatch(q BlockingQueue[*ExecTask], concurrentLimit Semaphore) {
 }
 
 func checkCancelled(future *Future) bool {
-	if future.Cancelled() {
+	if future.IsCancelled() {
 		future.ch <- &taskResult{nil, cancelledError}
 		close(future.ch)
 		future.TryGet()

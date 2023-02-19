@@ -70,7 +70,7 @@ func (et *simpleExecutor) ExecuteInGroupTimeout(task Task, g *FutureGroup, timeo
 func runTask(task Task, future *Future, concurrentLimit Semaphore) {
 	var r any
 	var err = cancelledError
-	if !future.Cancelled() {
+	if !future.IsCancelled() {
 		r, err = task()
 	}
 

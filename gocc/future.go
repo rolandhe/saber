@@ -55,7 +55,7 @@ func (f *Future) Cancel() {
 	f.canceledFlag.Store(true)
 }
 
-func (f *Future) Cancelled() bool {
+func (f *Future) IsCancelled() bool {
 	return f.canceledFlag.Load()
 }
 
@@ -176,6 +176,11 @@ func (fg *FutureGroup) WaitTimeout(timeout time.Duration) error {
 		return nil
 	case <-time.After(timeout):
 		return TimeoutError
+	}
+}
+func (fg *FutureGroup) Cancel() {
+	for _, future := range fg.futureGroup {
+		future.Cancel()
 	}
 }
 
