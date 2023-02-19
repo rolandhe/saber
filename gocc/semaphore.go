@@ -12,7 +12,7 @@ type Semaphore interface {
 	AcquireUntil()
 	AcquireTimeout(d time.Duration) bool
 	Release()
-	GetTotal() uint
+	TotalTokens() uint
 }
 
 func NewChanSemaphore(limit uint) Semaphore {
@@ -58,7 +58,7 @@ func (s *semaphoreImpl) AcquireTimeout(d time.Duration) bool {
 func (s *semaphoreImpl) Release() {
 	s.ch <- struct{}{}
 }
-func (s *semaphoreImpl) GetTotal() uint {
+func (s *semaphoreImpl) TotalTokens() uint {
 	return s.total
 }
 
@@ -125,6 +125,6 @@ func (s *semaphoreAtomic) Release() {
 	atomic.AddInt32(&s.counter, -1)
 }
 
-func (s *semaphoreAtomic) GetTotal() uint {
+func (s *semaphoreAtomic) TotalTokens() uint {
 	return uint(s.limit)
 }

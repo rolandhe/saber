@@ -16,7 +16,7 @@ func NewSimpleExecutor(concurLevel uint) Executor {
 
 func NewSimpleExecutorWithSemaphore(concurrentLimit Semaphore) Executor {
 	return &simpleExecutor{
-		concurLevel:     concurrentLimit.GetTotal(),
+		concurLevel:     concurrentLimit.TotalTokens(),
 		concurrentLimit: concurrentLimit,
 	}
 }
