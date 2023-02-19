@@ -39,31 +39,72 @@ func dispatch(q BlockingQueue[*ExecTask], concurrentLimit Semaphore) {
 			log.Println("empty q, try to poll")
 			continue
 		}
+		execTask := *(elem.v)
+		if checkCancelled(execTask.future) {
+			continue
+		}
+		goNext := false
 		for {
 			if !concurrentLimit.AcquireTimeout(waitTimeout) {
-				log.Println("met concurrent limit, wait....")
+				if checkCancelled(execTask.future) {
+					goNext = true
+					break
+				}
+				log.Println("met concurrent limit, wait timeout , and next...")
 				continue
 			}
 			break
 		}
+		if goNext {
+			continue
+		}
 
-		execTask := *(elem.v)
 		go runTask(execTask.task, execTask.future, concurrentLimit)
 	}
 }
 
+func checkCancelled(future *Future) bool {
+	if future.Cancelled() {
+		future.ch <- &taskResult{nil, cancelledError}
+		close(future.ch)
+		future.TryGet()
+		return true
+	}
+	return false
+}
+
 func (be *bufferedExecutor) Execute(task Task) (*Future, bool) {
 	future := newFuture()
-	return be.tryToOfferTask(task, future)
+	return be.tryToOfferTask(task, future, 0)
 }
-
+func (be *bufferedExecutor) ExecuteTimeout(task Task, timeout time.Duration) (*Future, bool) {
+	future := newFuture()
+	return be.tryToOfferTask(task, future, timeout)
+}
 func (be *bufferedExecutor) ExecuteInGroup(task Task, g *FutureGroup) (*Future, bool) {
 	future := newFutureWithGroup(g)
-	return be.tryToOfferTask(task, future)
+	return be.tryToOfferTask(task, future, 0)
 }
 
-func (be *bufferedExecutor) tryToOfferTask(task Task, future *Future) (*Future, bool) {
-	ok := be.queue.Offer(&ExecTask{
+func (be *bufferedExecutor) ExecuteInGroupTimeout(task Task, g *FutureGroup, timeout time.Duration) (*Future, bool) {
+	future := newFutureWithGroup(g)
+	return be.tryToOfferTask(task, future, timeout)
+}
+
+func (be *bufferedExecutor) tryToOfferTask(task Task, future *Future, timeout time.Duration) (*Future, bool) {
+	var ok = false
+	if timeout == 0 {
+		ok = be.queue.Offer(&ExecTask{
+			task:   task,
+			future: future,
+		})
+	} else {
+		ok = be.queue.OfferTimeout(&ExecTask{
+			task:   task,
+			future: future,
+		}, timeout)
+	}
+	ok = be.queue.Offer(&ExecTask{
 		task:   task,
 		future: future,
 	})

@@ -9,9 +9,10 @@ import (
 var TimeoutError = errors.New("timeout")
 
 type Future struct {
-	ch        chan *taskResult
-	tr        atomic.Pointer[taskResult]
-	grpNotify *notify
+	ch           chan *taskResult
+	tr           atomic.Pointer[taskResult]
+	grpNotify    *notify
+	canceledFlag atomic.Bool
 }
 
 func NewFutureGroup(count int) *FutureGroup {
@@ -48,6 +49,14 @@ func (f *Future) Get() (any, error) {
 		return v.r, v.e
 	}
 	return f.getInternalResult(p)
+}
+
+func (f *Future) Cancel() {
+	f.canceledFlag.Store(true)
+}
+
+func (f *Future) Cancelled() bool {
+	return f.canceledFlag.Load()
 }
 
 func (f *Future) TryGet() bool {

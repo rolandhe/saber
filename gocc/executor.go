@@ -1,5 +1,7 @@
 package gocc
 
+import "time"
+
 type Task func() (any, error)
 type CompleteHandler func(ret any, err error)
 
@@ -10,5 +12,7 @@ type taskResult struct {
 
 type Executor interface {
 	Execute(task Task) (*Future, bool)
+	ExecuteTimeout(task Task, timeout time.Duration) (*Future, bool)
 	ExecuteInGroup(task Task, g *FutureGroup) (*Future, bool)
+	ExecuteInGroupTimeout(task Task, g *FutureGroup, timeout time.Duration) (*Future, bool)
 }
