@@ -43,11 +43,11 @@ func dispatch(q BlockingQueue[*ExecTask], concurrentLimit Semaphore) {
 		if checkCancelled(execTask.future) {
 			continue
 		}
-		goNext := false
+		skip := false
 		for {
 			if !concurrentLimit.AcquireTimeout(waitTimeout) {
 				if checkCancelled(execTask.future) {
-					goNext = true
+					skip = true
 					break
 				}
 				log.Println("met concurrent limit, wait timeout , and next...")
@@ -55,7 +55,7 @@ func dispatch(q BlockingQueue[*ExecTask], concurrentLimit Semaphore) {
 			}
 			break
 		}
-		if goNext {
+		if skip {
 			continue
 		}
 
