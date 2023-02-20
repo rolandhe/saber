@@ -16,7 +16,7 @@ type Semaphore interface {
 }
 
 func NewChanSemaphore(limit uint) Semaphore {
-	return &semaphoreImpl{
+	return &semaphoreChan{
 		make(chan struct{}, limit),
 		limit,
 	}
@@ -29,12 +29,12 @@ func NewAtomicSemaphore(limit uint) Semaphore {
 	}
 }
 
-type semaphoreImpl struct {
+type semaphoreChan struct {
 	ch    chan struct{}
 	total uint
 }
 
-func (s *semaphoreImpl) Acquire() bool {
+func (s *semaphoreChan) Acquire() bool {
 	select {
 	case <-s.ch:
 		return true
@@ -43,10 +43,10 @@ func (s *semaphoreImpl) Acquire() bool {
 	}
 }
 
-func (s *semaphoreImpl) AcquireUntil() {
+func (s *semaphoreChan) AcquireUntil() {
 	<-s.ch
 }
-func (s *semaphoreImpl) AcquireTimeout(d time.Duration) bool {
+func (s *semaphoreChan) AcquireTimeout(d time.Duration) bool {
 	select {
 	case <-s.ch:
 		return true
@@ -55,10 +55,10 @@ func (s *semaphoreImpl) AcquireTimeout(d time.Duration) bool {
 	}
 }
 
-func (s *semaphoreImpl) Release() {
+func (s *semaphoreChan) Release() {
 	s.ch <- struct{}{}
 }
-func (s *semaphoreImpl) TotalTokens() uint {
+func (s *semaphoreChan) TotalTokens() uint {
 	return s.total
 }
 

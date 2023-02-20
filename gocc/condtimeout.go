@@ -7,6 +7,8 @@ import (
 	"unsafe"
 )
 
+// code from https://gist.github.com/zviadm/c234426882bfc8acba88f3503edaaa36#file-cond2-go
+
 type condTimeout struct {
 	locker sync.Locker
 	n      unsafe.Pointer
