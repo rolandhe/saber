@@ -112,13 +112,13 @@ type FutureGroup struct {
 	total    uint
 }
 
-func (fg *FutureGroup) Wait() {
+func (fg *FutureGroup) WaitUntil() {
 	fg.check()
 
 	<-fg.notifier.notifyChan
 }
 
-func (fg *FutureGroup) TryWait() bool {
+func (fg *FutureGroup) Wait() bool {
 	fg.check()
 
 	select {
