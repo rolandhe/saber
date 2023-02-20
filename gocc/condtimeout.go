@@ -12,6 +12,7 @@ import (
 type condTimeout struct {
 	locker sync.Locker
 	n      unsafe.Pointer
+	name   string
 }
 
 type SyncCondition interface {
@@ -23,6 +24,13 @@ type SyncCondition interface {
 
 func NewCondTimeout(l sync.Locker) SyncCondition {
 	c := &condTimeout{locker: l}
+	n := make(chan struct{})
+	c.n = unsafe.Pointer(&n)
+	return c
+}
+
+func NewCondTimeoutWithName(l sync.Locker, name string) SyncCondition {
+	c := &condTimeout{locker: l, name: name}
 	n := make(chan struct{})
 	c.n = unsafe.Pointer(&n)
 	return c
@@ -41,6 +49,7 @@ func (c *condTimeout) Wait() {
 func (c *condTimeout) WaitWithTimeout(t time.Duration) {
 	n := c.NotifyChan()
 	c.locker.Unlock()
+	CcLogger.Info("name:%s,wait with timeout start\n", c.name)
 	select {
 	case <-n:
 	case <-time.After(t):
@@ -65,6 +74,8 @@ func (c *condTimeout) Signal() {
 	n := c.NotifyChan()
 	select {
 	case n <- struct{}{}:
+		CcLogger.Info("name:%s,signal ok\n", c.name)
 	default:
+		CcLogger.Info("name:%s,signal lost\n", c.name)
 	}
 }

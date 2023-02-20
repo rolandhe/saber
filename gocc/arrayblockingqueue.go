@@ -17,6 +17,18 @@ func NewArrayBlockingQueue[T any](limit int, condFactory func(locker sync.Locker
 	}
 }
 
+func NewArrayBlockingQueueDefault[T any](limit int) BlockingQueue[T] {
+	locker := &sync.Mutex{}
+
+	return &arrayBlockingQueue[T]{
+		locker,
+		NewCondTimeoutWithName(locker, "read-cond"),
+		NewCondTimeoutWithName(locker, "write-cond"),
+		&ringBuffer[T]{make([]*Elem[T], limit, limit), int64(limit), 0, 0},
+		limit,
+	}
+}
+
 type ringBuffer[T any] struct {
 	buf   []*Elem[T]
 	limit int64
@@ -45,10 +57,10 @@ func (b *ringBuffer[T]) r() *Elem[T] {
 
 type arrayBlockingQueue[T any] struct {
 	sync.Locker
-	rc    SyncCondition
-	wc    SyncCondition
-	q     *ringBuffer[T]
-	limit int
+	readCondition SyncCondition
+	writeCond     SyncCondition
+	q             *ringBuffer[T]
+	limit         int
 }
 
 func (aq *arrayBlockingQueue[T]) Offer(t T) bool {
@@ -59,7 +71,7 @@ func (aq *arrayBlockingQueue[T]) Offer(t T) bool {
 		return false
 	}
 	aq.q.w(&Elem[T]{&t})
-	aq.rc.Signal()
+	aq.readCondition.Signal()
 	return true
 }
 
@@ -74,7 +86,7 @@ func (aq *arrayBlockingQueue[T]) OfferTimeout(t T, timeout time.Duration) bool {
 	hasCap := false
 	for !hasCap && wt > 0 {
 		start := time.Now().UnixNano()
-		aq.wc.WaitWithTimeout(time.Duration(wt))
+		aq.writeCond.WaitWithTimeout(time.Duration(wt))
 		hasCap = aq.q.hasCap()
 		if !hasCap {
 			cost := time.Now().UnixNano() - start
@@ -84,8 +96,8 @@ func (aq *arrayBlockingQueue[T]) OfferTimeout(t T, timeout time.Duration) bool {
 	if hasCap {
 		aq.q.w(&Elem[T]{&t})
 	}
+	aq.readCondition.Signal()
 	aq.Unlock()
-	aq.rc.Signal()
 	return hasCap
 }
 
@@ -97,7 +109,7 @@ func (aq *arrayBlockingQueue[T]) Pull() (*Elem[T], bool) {
 		return nil, false
 	}
 	e := aq.q.r()
-	aq.wc.Signal()
+	aq.writeCond.Signal()
 	return e, true
 }
 
@@ -105,25 +117,27 @@ func (aq *arrayBlockingQueue[T]) PullTimeout(timeout time.Duration) (*Elem[T], b
 	aq.Lock()
 	if aq.q.count() > 0 {
 		elem := aq.q.r()
+		aq.writeCond.Signal()
 		aq.Unlock()
-		aq.wc.Signal()
 		return elem, true
 	}
 	wt := int64(timeout)
 	hasElem := false
 	for !hasElem && wt > 0 {
 		start := time.Now().UnixNano()
-		aq.wc.WaitWithTimeout(time.Duration(wt))
+		aq.readCondition.WaitWithTimeout(time.Duration(wt))
 		hasElem = aq.q.count() > 0
 		if !hasElem {
 			cost := time.Now().UnixNano() - start
 			wt -= cost
+			CcLogger.InfoLn("pull timeout, wait to next")
 		}
 	}
 	var elem *Elem[T]
 	if hasElem {
+		CcLogger.InfoLn("read data, goto process")
 		elem = aq.q.r()
-		aq.wc.Signal()
+		aq.writeCond.Signal()
 	}
 	aq.Unlock()
 
