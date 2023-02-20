@@ -47,7 +47,7 @@ func (f *Future) Get() (any, error) {
 	}
 }
 
-func (f *Future) GetUntill() (any, error) {
+func (f *Future) GetUntil() (any, error) {
 	<-f.ch
 	return f.result.r, f.result.e
 }
@@ -71,7 +71,7 @@ func (f *Future) TryGet() bool {
 
 func (f *Future) GetTimeout(d time.Duration) (any, error) {
 	if d < 0 {
-		return f.GetUntill()
+		return f.GetUntil()
 	}
 	if d == 0 {
 		return f.Get()

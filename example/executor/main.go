@@ -16,7 +16,7 @@ func main() {
 		log.Println("error")
 		return
 	}
-	ret, err := f.GetUntill()
+	ret, err := f.GetUntil()
 	if err != nil {
 		log.Println(err)
 		return
