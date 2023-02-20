@@ -19,7 +19,7 @@ func NewFutureGroup(count int) *FutureGroup {
 	return &FutureGroup{
 		notifier: &notify{
 			counter:    int64(count),
-			notifyChan: make(chan struct{}, 1),
+			notifyChan: make(chan struct{}),
 		},
 		total: uint(count),
 	}
@@ -101,39 +101,28 @@ type notify struct {
 func (n *notify) notifyOne() {
 	c := atomic.AddInt64(&n.counter, -1)
 	if c == 0 {
-		n.notifyChan <- struct{}{}
 		close(n.notifyChan)
 	}
 }
 
 type FutureGroup struct {
 	futureGroup []*Future
-	finish      atomic.Bool
-	notifier    *notify
-	total       uint
+	//finish      atomic.Bool
+	notifier *notify
+	total    uint
 }
 
 func (fg *FutureGroup) Wait() {
 	fg.check()
-	if fg.finish.Load() {
-		return
-	}
-	_, ok := <-fg.notifier.notifyChan
-	if ok {
-		fg.finish.Store(true)
-	}
+
+	<-fg.notifier.notifyChan
 }
 
 func (fg *FutureGroup) TryWait() bool {
 	fg.check()
-	if fg.finish.Load() {
-		return true
-	}
+
 	select {
-	case _, ok := <-fg.notifier.notifyChan:
-		if ok {
-			fg.finish.Store(true)
-		}
+	case <-fg.notifier.notifyChan:
 		return true
 	default:
 		return false
@@ -142,14 +131,9 @@ func (fg *FutureGroup) TryWait() bool {
 
 func (fg *FutureGroup) WaitTimeout(timeout time.Duration) error {
 	fg.check()
-	if fg.finish.Load() {
-		return nil
-	}
+
 	select {
-	case _, ok := <-fg.notifier.notifyChan:
-		if ok {
-			fg.finish.Store(true)
-		}
+	case <-fg.notifier.notifyChan:
 		return nil
 	case <-time.After(timeout):
 		return TimeoutError
