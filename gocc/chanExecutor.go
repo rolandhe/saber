@@ -7,26 +7,30 @@ import (
 
 var cancelledError = errors.New("cancelled task")
 
-func NewSimpleExecutor(concurLevel uint) Executor {
-	return &simpleExecutor{
+func NewDefaultExecutor(concurLevel uint) Executor {
+	return NewChanExecutor(concurLevel)
+}
+
+func NewChanExecutor(concurLevel uint) Executor {
+	return &chanExecutor{
 		concurLevel:     concurLevel,
 		concurrentLimit: NewChanSemaphore(concurLevel),
 	}
 }
 
-func NewSimpleExecutorWithSemaphore(concurrentLimit Semaphore) Executor {
-	return &simpleExecutor{
+func NewChanExecutorWithSemaphore(concurrentLimit Semaphore) Executor {
+	return &chanExecutor{
 		concurLevel:     concurrentLimit.TotalTokens(),
 		concurrentLimit: concurrentLimit,
 	}
 }
 
-type simpleExecutor struct {
+type chanExecutor struct {
 	concurLevel     uint
 	concurrentLimit Semaphore
 }
 
-func (et *simpleExecutor) Execute(task Task) (*Future, bool) {
+func (et *chanExecutor) Execute(task Task) (*Future, bool) {
 	if !acquireToken(et.concurrentLimit, 0) {
 		return nil, false
 	}
@@ -36,7 +40,7 @@ func (et *simpleExecutor) Execute(task Task) (*Future, bool) {
 	return future, true
 }
 
-func (et *simpleExecutor) ExecuteTimeout(task Task, timeout time.Duration) (*Future, bool) {
+func (et *chanExecutor) ExecuteTimeout(task Task, timeout time.Duration) (*Future, bool) {
 	if !acquireToken(et.concurrentLimit, timeout) {
 		return nil, false
 	}
@@ -46,7 +50,7 @@ func (et *simpleExecutor) ExecuteTimeout(task Task, timeout time.Duration) (*Fut
 	return future, true
 }
 
-func (et *simpleExecutor) ExecuteInGroup(task Task, g *FutureGroup) (*Future, bool) {
+func (et *chanExecutor) ExecuteInGroup(task Task, g *FutureGroup) (*Future, bool) {
 	if !acquireToken(et.concurrentLimit, 0) {
 		return nil, false
 	}
@@ -56,7 +60,7 @@ func (et *simpleExecutor) ExecuteInGroup(task Task, g *FutureGroup) (*Future, bo
 	return future, true
 }
 
-func (et *simpleExecutor) ExecuteInGroupTimeout(task Task, g *FutureGroup, timeout time.Duration) (*Future, bool) {
+func (et *chanExecutor) ExecuteInGroupTimeout(task Task, g *FutureGroup, timeout time.Duration) (*Future, bool) {
 	if !acquireToken(et.concurrentLimit, timeout) {
 		return nil, false
 	}
@@ -74,10 +78,8 @@ func runTask(task Task, future *Future, concurrentLimit Semaphore) {
 		r, err = task()
 	}
 
-	future.ch <- &taskResult{r, err}
-	close(future.ch)
+	future.accept(&taskResult{r, err})
 	concurrentLimit.Release()
-	future.TryGet()
 }
 
 func acquireToken(concurrentLimit Semaphore, timeout time.Duration) bool {

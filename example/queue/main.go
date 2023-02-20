@@ -8,11 +8,13 @@ import (
 )
 
 func main() {
-	//productAndConsumer()
-	consumerWait()
+	//productAndConsumerUsingArrayQ()
+	//productAndConsumerUsingChanQueue()
+	//consumerWaitArrayQ()
+	consumerWaitChanQ()
 }
 
-func consumerWait() {
+func consumerWaitArrayQ() {
 	q := gocc.NewArrayBlockingQueueDefault[int64](10)
 	waiter := gocc.NewCountdownLatch(1)
 	go func() {
@@ -36,8 +38,41 @@ func consumerWait() {
 	waiter.WaitUtil()
 }
 
-func productAndConsumer() {
+func consumerWaitChanQ() {
+	q := gocc.NewChanBlockingQueue[int64](10)
+	waiter := gocc.NewCountdownLatch(1)
+	go func() {
+		for {
+			elem, ok := q.PullTimeout(time.Second * 20)
+			if ok {
+				v := elem.GetValue()
+				end := time.Now().UnixNano()
+				log.Printf("cost %d\n", end-v)
+				waiter.Down()
+				break
+			}
+		}
+	}()
+
+	time.Sleep(time.Millisecond * 800)
+
+	ok := q.Offer(time.Now().UnixNano())
+	log.Printf("offer:%v\n", ok)
+
+	waiter.WaitUtil()
+}
+
+func productAndConsumerUsingArrayQ() {
 	q := gocc.NewArrayBlockingQueueDefault[int](10)
+	productAndConsumerUsingQueue(q)
+}
+
+func productAndConsumerUsingChanQueue() {
+	q := gocc.NewChanBlockingQueue[int](10)
+	productAndConsumerUsingQueue(q)
+}
+
+func productAndConsumerUsingQueue(q gocc.BlockingQueue[int]) {
 	waiter := gocc.NewCountdownLatch(1000)
 	for i := 1; i <= 10; i++ {
 		go func(id int) {
@@ -49,7 +84,7 @@ func productAndConsumer() {
 				}
 				v := elem.GetValue()
 				time.Sleep(time.Millisecond * 100)
-				log.Printf("end g:%d,%d nano\n", id, v)
+				log.Printf("end g:%d,using %d nano\n", id, v)
 				if 0 == waiter.Down() {
 					break
 				}
@@ -57,6 +92,7 @@ func productAndConsumer() {
 		}(i)
 	}
 
+	start := time.Now().UnixNano()
 	for i := 1; i <= 1000; {
 		if q.OfferTimeout(i, time.Millisecond*1000) {
 			i++
@@ -66,5 +102,6 @@ func productAndConsumer() {
 	}
 
 	waiter.WaitUtil()
-	fmt.Println("end")
+	cost := time.Now().UnixNano() - start
+	fmt.Printf("end, cost %d nano\n", cost)
 }

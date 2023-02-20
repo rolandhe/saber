@@ -9,8 +9,8 @@ import (
 var TimeoutError = errors.New("timeout")
 
 type Future struct {
-	ch           chan *taskResult
-	tr           atomic.Pointer[taskResult]
+	ch           chan struct{}
+	result       *taskResult
 	grpNotify    *notify
 	canceledFlag atomic.Bool
 }
@@ -27,28 +27,29 @@ func NewFutureGroup(count int) *FutureGroup {
 
 func newFuture() *Future {
 	return &Future{
-		ch: make(chan *taskResult, 1),
+		ch: make(chan struct{}),
 	}
 }
 
 func newFutureWithGroup(g *FutureGroup) *Future {
 	return &Future{
-		ch:        make(chan *taskResult, 1),
+		ch:        make(chan struct{}),
 		grpNotify: g.notifier,
 	}
 }
 
 func (f *Future) Get() (any, error) {
-	p := f.tr.Load()
-	if p != nil {
-		return p.r, p.e
+	select {
+	case <-f.ch:
+		return f.result.r, f.result.e
+	default:
+		return nil, TimeoutError
 	}
-	v, ok := <-f.ch
-	if ok {
-		f.accept(v)
-		return v.r, v.e
-	}
-	return f.getInternalResult(p)
+}
+
+func (f *Future) GetUntill() (any, error) {
+	<-f.ch
+	return f.result.r, f.result.e
 }
 
 func (f *Future) Cancel() {
@@ -60,15 +61,8 @@ func (f *Future) IsCancelled() bool {
 }
 
 func (f *Future) TryGet() bool {
-	p := f.tr.Load()
-	if p != nil {
-		return true
-	}
 	select {
-	case v, ok := <-f.ch:
-		if ok {
-			f.accept(v)
-		}
+	case <-f.ch:
 		return true
 	default:
 		return false
@@ -77,40 +71,23 @@ func (f *Future) TryGet() bool {
 
 func (f *Future) GetTimeout(d time.Duration) (any, error) {
 	if d < 0 {
-		return f.Get()
+		return f.GetUntill()
 	}
 	if d == 0 {
-		if f.TryGet() {
-			return f.Get()
-		}
-		return nil, TimeoutError
+		return f.Get()
 	}
-	p := f.tr.Load()
-	if p != nil {
-		return p.r, p.e
-	}
+
 	select {
-	case v, ok := <-f.ch:
-		if ok {
-			f.accept(v)
-			return v.r, v.e
-		}
-		return f.getInternalResult(p)
+	case <-f.ch:
+		return f.result.r, f.result.e
 	case <-time.After(d):
 		return nil, TimeoutError
 	}
 }
 
-func (f *Future) getInternalResult(p *taskResult) (any, error) {
-	for {
-		p = f.tr.Load()
-		if p != nil {
-			return p.r, p.e
-		}
-	}
-}
 func (f *Future) accept(v *taskResult) {
-	f.tr.Store(v)
+	f.result = v
+	close(f.ch)
 	if f.grpNotify != nil {
 		f.grpNotify.notifyOne()
 	}

@@ -15,6 +15,10 @@ type Semaphore interface {
 	TotalTokens() uint
 }
 
+func NewDefaultSemaphore(limit uint) Semaphore {
+	return NewChanSemaphore(limit)
+}
+
 func NewChanSemaphore(limit uint) Semaphore {
 	return &semaphoreChan{
 		make(chan int8, limit),

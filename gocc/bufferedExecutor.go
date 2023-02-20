@@ -12,11 +12,7 @@ type bufferedExecutor struct {
 }
 
 func NewBufferedExecutor(queue BlockingQueue[*ExecTask], concurLevel uint) Executor {
-	executor := &bufferedExecutor{
-		queue: queue,
-	}
-	go dispatch(queue, NewChanSemaphore(concurLevel))
-	return executor
+	return NewBufferedExecutorWithSemaphore(queue, NewChanSemaphore(concurLevel))
 }
 
 func NewBufferedExecutorWithSemaphore(queue BlockingQueue[*ExecTask], concurrentLimit Semaphore) Executor {
@@ -59,15 +55,14 @@ func dispatch(q BlockingQueue[*ExecTask], concurrentLimit Semaphore) {
 			continue
 		}
 
+		log.Println("go to run task..")
 		go runTask(execTask.task, execTask.future, concurrentLimit)
 	}
 }
 
 func checkCancelled(future *Future) bool {
 	if future.IsCancelled() {
-		future.ch <- &taskResult{nil, cancelledError}
-		close(future.ch)
-		future.TryGet()
+		future.accept(&taskResult{nil, cancelledError})
 		return true
 	}
 	return false
@@ -104,10 +99,6 @@ func (be *bufferedExecutor) tryToOfferTask(task Task, future *Future, timeout ti
 			future: future,
 		}, timeout)
 	}
-	ok = be.queue.Offer(&ExecTask{
-		task:   task,
-		future: future,
-	})
 	if !ok {
 		return nil, false
 	}
