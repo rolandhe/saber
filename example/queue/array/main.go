@@ -8,12 +8,12 @@ import (
 )
 
 func main() {
-	//productAndConsumerUsingChanQueue()
-	consumerWaitChanQ()
+	productAndConsumerUsingArrayQ()
+	consumerWaitArrayQ()
 }
 
-func consumerWaitChanQ() {
-	q := gocc.NewChanBlockingQueue[int64](10)
+func consumerWaitArrayQ() {
+	q := gocc.NewArrayBlockingQueueDefault[int64](10)
 	waiter := gocc.NewCountdownLatch(1)
 	go func() {
 		for {
@@ -36,8 +36,8 @@ func consumerWaitChanQ() {
 	waiter.WaitUtil()
 }
 
-func productAndConsumerUsingChanQueue() {
-	q := gocc.NewChanBlockingQueue[int](10)
+func productAndConsumerUsingArrayQ() {
+	q := gocc.NewArrayBlockingQueueDefault[int](10)
 	productAndConsumerUsingQueue(q)
 }
 

@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+// unstable, 推荐使用NewChanExecutor
+
 const waitTimeout = time.Second * 5
 
 type bufferedExecutor struct {
