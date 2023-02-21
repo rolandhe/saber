@@ -66,7 +66,6 @@ func (et *chanExecutor) ExecuteInGroupTimeout(task Task, g *FutureGroup, timeout
 	}
 
 	future := newFutureWithGroup(g)
-	g.add(future)
 	go runTask(task, future, et.concurrentLimit)
 	return future, true
 }

@@ -32,10 +32,12 @@ func newFuture() *Future {
 }
 
 func newFutureWithGroup(g *FutureGroup) *Future {
-	return &Future{
+	future := &Future{
 		ch:        make(chan struct{}),
 		grpNotify: g.notifier,
 	}
+	g.add(future)
+	return future
 }
 
 func (f *Future) Get() (any, error) {
@@ -107,9 +109,16 @@ func (n *notify) notifyOne() {
 
 type FutureGroup struct {
 	futureGroup []*Future
-	//finish      atomic.Bool
-	notifier *notify
-	total    uint
+	notifier    *notify
+	total       uint
+}
+
+func (fg *FutureGroup) GetFutures() ([]*Future, bool) {
+	ok := fg.Wait()
+	if !ok {
+		return nil, false
+	}
+	return fg.futureGroup, true
 }
 
 func (fg *FutureGroup) WaitUntil() {
@@ -120,7 +129,6 @@ func (fg *FutureGroup) WaitUntil() {
 
 func (fg *FutureGroup) Wait() bool {
 	fg.check()
-
 	select {
 	case <-fg.notifier.notifyChan:
 		return true
