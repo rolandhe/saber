@@ -32,7 +32,7 @@ func waitUntil() {
 }
 
 func waitUntilChan() {
-	limit := gocc.NewChanSemaphore(500)
+	limit := gocc.NewDefaultSemaphore(500)
 	waiter := sync.WaitGroup{}
 	waiter.Add(1000)
 	for i := 0; i < 1000; i++ {

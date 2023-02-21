@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// unstable, 推荐使用NewChanBlockingQueue
+// unstable, 推荐使用NewDefaultBlockingQueue
 
 func NewArrayBlockingQueue[T any](limit int, condFactory func(locker sync.Locker) SyncCondition) BlockingQueue[T] {
 	locker := &sync.Mutex{}

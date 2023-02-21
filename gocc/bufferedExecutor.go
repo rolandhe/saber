@@ -14,7 +14,7 @@ type bufferedExecutor struct {
 }
 
 func NewBufferedExecutor(queue BlockingQueue[*ExecTask], concurLevel uint) Executor {
-	return NewBufferedExecutorWithSemaphore(queue, NewChanSemaphore(concurLevel))
+	return NewBufferedExecutorWithSemaphore(queue, NewDefaultSemaphore(concurLevel))
 }
 
 func NewBufferedExecutorWithSemaphore(queue BlockingQueue[*ExecTask], concurrentLimit Semaphore) Executor {

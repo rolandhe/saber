@@ -5,10 +5,6 @@ import (
 )
 
 func NewDefaultBlockingQueue[T any](limit int) BlockingQueue[T] {
-	return NewChanBlockingQueue[T](limit)
-}
-
-func NewChanBlockingQueue[T any](limit int) BlockingQueue[T] {
 	if limit < 0 {
 		limit = defaultLimit
 	}

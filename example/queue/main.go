@@ -13,7 +13,7 @@ func main() {
 }
 
 func consumerWaitChanQ() {
-	q := gocc.NewChanBlockingQueue[int64](10)
+	q := gocc.NewDefaultBlockingQueue[int64](10)
 	waiter := gocc.NewCountdownLatch(1)
 	go func() {
 		for {
@@ -37,7 +37,7 @@ func consumerWaitChanQ() {
 }
 
 func productAndConsumerUsingChanQueue() {
-	q := gocc.NewChanBlockingQueue[int](10)
+	q := gocc.NewDefaultBlockingQueue[int](10)
 	productAndConsumerUsingQueue(q)
 }
 

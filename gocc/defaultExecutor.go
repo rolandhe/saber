@@ -5,20 +5,9 @@ import (
 )
 
 func NewDefaultExecutor(concurLevel uint) Executor {
-	return NewChanExecutor(concurLevel)
-}
-
-func NewChanExecutor(concurLevel uint) Executor {
 	return &chanExecutor{
 		concurLevel:     concurLevel,
-		concurrentLimit: NewChanSemaphore(concurLevel),
-	}
-}
-
-func NewChanExecutorWithSemaphore(concurrentLimit Semaphore) Executor {
-	return &chanExecutor{
-		concurLevel:     concurrentLimit.TotalTokens(),
-		concurrentLimit: concurrentLimit,
+		concurrentLimit: NewDefaultSemaphore(concurLevel),
 	}
 }
 

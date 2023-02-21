@@ -14,12 +14,12 @@ func main() {
 }
 
 func execSingleTaskUsingChanQ() {
-	q := gocc.NewChanBlockingQueue[*gocc.ExecTask](10)
+	q := gocc.NewDefaultBlockingQueue[*gocc.ExecTask](10)
 	execSingleTask(q)
 }
 
 func execGroupTaskUsingChanQ() {
-	q := gocc.NewChanBlockingQueue[*gocc.ExecTask](10)
+	q := gocc.NewDefaultBlockingQueue[*gocc.ExecTask](10)
 	execGroupTask(q)
 }
 

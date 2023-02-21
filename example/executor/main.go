@@ -12,7 +12,7 @@ func main() {
 }
 
 func execSingleTask() {
-	executor := gocc.NewChanExecutor(10)
+	executor := gocc.NewDefaultExecutor(10)
 	f, ok := executor.ExecuteTimeout(func() (any, error) {
 		time.Sleep(time.Millisecond * 100)
 		return 325, nil
@@ -31,7 +31,7 @@ func execSingleTask() {
 }
 
 func execGroupTask() {
-	executor := gocc.NewChanExecutor(10)
+	executor := gocc.NewDefaultExecutor(10)
 	fg := gocc.NewFutureGroup(100)
 	for i := 0; i < 100; i++ {
 		_, ok := executor.ExecuteInGroupTimeout(func() (any, error) {
