@@ -1,11 +1,8 @@
 package gocc
 
 import (
-	"errors"
 	"time"
 )
-
-var cancelledError = errors.New("cancelled task")
 
 func NewDefaultExecutor(concurLevel uint) Executor {
 	return NewChanExecutor(concurLevel)
@@ -72,7 +69,7 @@ func (et *chanExecutor) ExecuteInGroupTimeout(task Task, g *FutureGroup, timeout
 
 func runTask(task Task, future *Future, concurrentLimit Semaphore) {
 	var r any
-	var err = cancelledError
+	var err = TaskCancelledError
 	if !future.IsCancelled() {
 		r, err = task()
 	}

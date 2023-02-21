@@ -6,7 +6,10 @@ import (
 	"time"
 )
 
-var TimeoutError = errors.New("timeout")
+var (
+	TimeoutError       = errors.New("timeout")
+	TaskCancelledError = errors.New("future task is cancelled")
+)
 
 type Future struct {
 	ch           chan struct{}
@@ -41,6 +44,9 @@ func newFutureWithGroup(g *FutureGroup) *Future {
 }
 
 func (f *Future) Get() (any, error) {
+	if f.IsCancelled() {
+		return nil, TaskCancelledError
+	}
 	select {
 	case <-f.ch:
 		return f.result.r, f.result.e
@@ -50,6 +56,9 @@ func (f *Future) Get() (any, error) {
 }
 
 func (f *Future) GetUntil() (any, error) {
+	if f.IsCancelled() {
+		return nil, TaskCancelledError
+	}
 	<-f.ch
 	return f.result.r, f.result.e
 }
@@ -63,6 +72,9 @@ func (f *Future) IsCancelled() bool {
 }
 
 func (f *Future) TryGet() bool {
+	if f.IsCancelled() {
+		return true
+	}
 	select {
 	case <-f.ch:
 		return true
@@ -72,6 +84,9 @@ func (f *Future) TryGet() bool {
 }
 
 func (f *Future) GetTimeout(d time.Duration) (any, error) {
+	if f.IsCancelled() {
+		return nil, TaskCancelledError
+	}
 	if d < 0 {
 		return f.GetUntil()
 	}
