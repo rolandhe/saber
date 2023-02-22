@@ -43,7 +43,7 @@ func execSingleTask(q gocc.BlockingQueue[*gocc.ExecTask]) {
 		log.Println("error")
 		return
 	}
-	ret, err := f.GetUntil()
+	ret, err := f.Get()
 	if err != nil {
 		log.Println(err)
 		return
@@ -66,8 +66,7 @@ func execGroupTask(q gocc.BlockingQueue[*gocc.ExecTask]) {
 		}
 	}
 
-	fg.Wait()
-	futures, _ := fg.GetFutures()
+	futures := fg.Get()
 	for _, f := range futures {
 		v, _ := f.Get()
 		log.Println(v)

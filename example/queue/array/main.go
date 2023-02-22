@@ -30,7 +30,7 @@ func consumerWaitArrayQ() {
 
 	time.Sleep(time.Millisecond * 800)
 
-	ok := q.Offer(time.Now().UnixNano())
+	ok := q.TryOffer(time.Now().UnixNano())
 	log.Printf("offer:%v\n", ok)
 
 	waiter.Wait()
