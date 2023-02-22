@@ -1,3 +1,8 @@
+// Package gocc, Golang concurrent tools like java juc.
+//
+// Copyright 2023 The saber Authors. All rights reserved.
+//
+
 package gocc
 
 import (
@@ -9,6 +14,23 @@ func NewDefaultExecutor(concurLevel uint) Executor {
 		concurLevel:     concurLevel,
 		concurrentLimit: NewDefaultSemaphore(concurLevel),
 	}
+}
+
+type Task func() (any, error)
+
+// Executor 多任务执行器
+type Executor interface {
+	// Execute 执行任务,如果执行器内资源已耗尽,则直接返回nil,false,否则返回future和true
+	Execute(task Task) (*Future, bool)
+	// ExecuteTimeout 执行任务,支持超时,如果执行器内资源已耗尽且在超时时间内依然不能获取到资源,则返回nil,false,如果执行器内有资源或者超时时间内能获取资源,返回future,true
+	ExecuteTimeout(task Task, timeout time.Duration) (*Future, bool)
+	ExecuteInGroup(task Task, g *FutureGroup) (*Future, bool)
+	ExecuteInGroupTimeout(task Task, g *FutureGroup, timeout time.Duration) (*Future, bool)
+}
+
+type taskResult struct {
+	r any
+	e error
 }
 
 type chanExecutor struct {
@@ -69,7 +91,7 @@ func runTask(task Task, future *Future, concurrentLimit Semaphore) {
 
 func acquireToken(concurrentLimit Semaphore, timeout time.Duration) bool {
 	if timeout == 0 {
-		if !concurrentLimit.Acquire() {
+		if !concurrentLimit.TryAcquire() {
 			return false
 		}
 	} else {

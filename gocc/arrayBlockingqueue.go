@@ -1,3 +1,6 @@
+// Package gocc, Golang concurrent tools like java juc.
+//
+// Copyright 2023 The saber Authors. All rights reserved.
 package gocc
 
 import (
@@ -7,7 +10,7 @@ import (
 
 // unstable, 推荐使用NewDefaultBlockingQueue
 
-func NewArrayBlockingQueue[T any](limit int, condFactory func(locker sync.Locker) SyncCondition) BlockingQueue[T] {
+func NewArrayBlockingQueue[T any](limit int, condFactory func(locker sync.Locker) Condition) BlockingQueue[T] {
 	locker := &sync.Mutex{}
 
 	return &arrayBlockingQueue[T]{
@@ -46,12 +49,12 @@ func (b *ringBuffer[T]) count() int64 {
 	return b.wi - b.ri
 }
 
-func (b *ringBuffer[T]) w(e *Elem[T]) {
+func (b *ringBuffer[T]) write(e *Elem[T]) {
 	index := int(b.wi % b.limit)
 	b.buf[index] = e
 	b.wi++
 }
-func (b *ringBuffer[T]) r() *Elem[T] {
+func (b *ringBuffer[T]) read() *Elem[T] {
 	index := int(b.ri % b.limit)
 	b.ri++
 	return b.buf[index]
@@ -59,20 +62,40 @@ func (b *ringBuffer[T]) r() *Elem[T] {
 
 type arrayBlockingQueue[T any] struct {
 	sync.Locker
-	readCondition SyncCondition
-	writeCond     SyncCondition
+	readCondition Condition
+	writeCond     Condition
 	q             *ringBuffer[T]
 	limit         int
 }
 
-func (aq *arrayBlockingQueue[T]) Offer(t T) bool {
+func (aq *arrayBlockingQueue[T]) Offer(t T) {
+	aq.Lock()
+	defer aq.Unlock()
+
+	if aq.q.hasCap() {
+		aq.q.write(&Elem[T]{&t})
+		aq.readCondition.Signal()
+		return
+	}
+
+	for {
+		aq.writeCond.Wait()
+		if aq.q.hasCap() {
+			aq.q.write(&Elem[T]{&t})
+			aq.readCondition.Signal()
+			return
+		}
+	}
+}
+
+func (aq *arrayBlockingQueue[T]) TryOffer(t T) bool {
 	aq.Lock()
 	defer aq.Unlock()
 
 	if !aq.q.hasCap() {
 		return false
 	}
-	aq.q.w(&Elem[T]{&t})
+	aq.q.write(&Elem[T]{&t})
 	aq.readCondition.Signal()
 	return true
 }
@@ -80,7 +103,7 @@ func (aq *arrayBlockingQueue[T]) Offer(t T) bool {
 func (aq *arrayBlockingQueue[T]) OfferTimeout(t T, timeout time.Duration) bool {
 	aq.Lock()
 	if aq.q.hasCap() {
-		aq.q.w(&Elem[T]{&t})
+		aq.q.write(&Elem[T]{&t})
 		aq.Unlock()
 		return true
 	}
@@ -96,21 +119,41 @@ func (aq *arrayBlockingQueue[T]) OfferTimeout(t T, timeout time.Duration) bool {
 		}
 	}
 	if hasCap {
-		aq.q.w(&Elem[T]{&t})
+		aq.q.write(&Elem[T]{&t})
 	}
 	aq.readCondition.Signal()
 	aq.Unlock()
 	return hasCap
 }
 
-func (aq *arrayBlockingQueue[T]) Pull() (*Elem[T], bool) {
+func (aq *arrayBlockingQueue[T]) Pull() *Elem[T] {
+	aq.Lock()
+	defer aq.Unlock()
+
+	if aq.q.count() > 0 {
+		e := aq.q.read()
+		aq.writeCond.Signal()
+		return e
+	}
+
+	for {
+		aq.readCondition.Wait()
+		if aq.q.count() > 0 {
+			e := aq.q.read()
+			aq.writeCond.Signal()
+			return e
+		}
+	}
+}
+
+func (aq *arrayBlockingQueue[T]) TryPull() (*Elem[T], bool) {
 	aq.Lock()
 	defer aq.Unlock()
 
 	if aq.q.count() == 0 {
 		return nil, false
 	}
-	e := aq.q.r()
+	e := aq.q.read()
 	aq.writeCond.Signal()
 	return e, true
 }
@@ -118,7 +161,7 @@ func (aq *arrayBlockingQueue[T]) Pull() (*Elem[T], bool) {
 func (aq *arrayBlockingQueue[T]) PullTimeout(timeout time.Duration) (*Elem[T], bool) {
 	aq.Lock()
 	if aq.q.count() > 0 {
-		elem := aq.q.r()
+		elem := aq.q.read()
 		aq.writeCond.Signal()
 		aq.Unlock()
 		return elem, true
@@ -138,7 +181,7 @@ func (aq *arrayBlockingQueue[T]) PullTimeout(timeout time.Duration) (*Elem[T], b
 	var elem *Elem[T]
 	if hasElem {
 		CcLogger.InfoLn("read data, goto process")
-		elem = aq.q.r()
+		elem = aq.q.read()
 		aq.writeCond.Signal()
 	}
 	aq.Unlock()

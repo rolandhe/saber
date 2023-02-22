@@ -20,7 +20,7 @@ func waitUntil() {
 	for i := 0; i < 1000; i++ {
 		go func(id int) {
 			start := time.Now().UnixNano()
-			limit.AcquireUntil()
+			limit.Acquire()
 			waitTime := time.Now().UnixNano() - start
 			time.Sleep(time.Millisecond * 200)
 			log.Printf("g:%d,wait:%d\n", id, waitTime)
@@ -38,7 +38,7 @@ func waitUntilChan() {
 	for i := 0; i < 1000; i++ {
 		go func(id int) {
 			start := time.Now().UnixNano()
-			limit.AcquireUntil()
+			limit.Acquire()
 			waitTime := time.Now().UnixNano() - start
 			time.Sleep(time.Millisecond * 200)
 			log.Printf("g:%d,wait:%d\n", id, waitTime)

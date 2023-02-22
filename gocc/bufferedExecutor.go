@@ -1,3 +1,8 @@
+// Package gocc, Golang concurrent tools like java juc.
+//
+// Copyright 2023 The saber Authors. All rights reserved.
+//
+
 package gocc
 
 import (
@@ -6,7 +11,6 @@ import (
 )
 
 // unstable, 推荐使用NewChanExecutor
-
 const waitTimeout = time.Second * 5
 
 type bufferedExecutor struct {
@@ -91,7 +95,7 @@ func (be *bufferedExecutor) ExecuteInGroupTimeout(task Task, g *FutureGroup, tim
 func (be *bufferedExecutor) tryToOfferTask(task Task, future *Future, timeout time.Duration) (*Future, bool) {
 	var ok = false
 	if timeout == 0 {
-		ok = be.queue.Offer(&ExecTask{
+		ok = be.queue.TryOffer(&ExecTask{
 			task:   task,
 			future: future,
 		})

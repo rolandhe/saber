@@ -1,3 +1,8 @@
+// Package strutils, string tool
+//
+// Copyright 2023 The saber Authors. All rights reserved.
+//
+
 package strutils
 
 import (

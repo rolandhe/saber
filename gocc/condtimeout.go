@@ -9,31 +9,37 @@ import (
 
 // code from https://gist.github.com/zviadm/c234426882bfc8acba88f3503edaaa36#file-cond2-go
 
-type condTimeout struct {
-	locker sync.Locker
-	n      unsafe.Pointer
-	name   string
-}
-
-type SyncCondition interface {
+// Condition 支持wait timeout的同步条件
+type Condition interface {
+	// Wait 同Cond Wait, 等待直到被唤醒
 	Wait()
+	// WaitWithTimeout , 带有超时的等待
 	WaitWithTimeout(t time.Duration)
+	// Broadcast 同Cond Broadcast
 	Broadcast()
+	// Signal 同Cond Signal
 	Signal()
 }
 
-func NewCondTimeout(l sync.Locker) SyncCondition {
+func NewCondTimeout(l sync.Locker) Condition {
 	c := &condTimeout{locker: l}
 	n := make(chan struct{})
 	c.n = unsafe.Pointer(&n)
 	return c
 }
 
-func NewCondTimeoutWithName(l sync.Locker, name string) SyncCondition {
+// NewCondTimeoutWithName 构建Condition，可以指定名字, 日志输出是带有名字，方便排查问题
+func NewCondTimeoutWithName(l sync.Locker, name string) Condition {
 	c := &condTimeout{locker: l, name: name}
 	n := make(chan struct{})
 	c.n = unsafe.Pointer(&n)
 	return c
+}
+
+type condTimeout struct {
+	locker sync.Locker
+	n      unsafe.Pointer
+	name   string
 }
 
 // Wait Waits for Broadcast calls. Similar to regular sync.Cond, this unlocks the underlying
@@ -49,10 +55,11 @@ func (c *condTimeout) Wait() {
 func (c *condTimeout) WaitWithTimeout(t time.Duration) {
 	n := c.NotifyChan()
 	c.locker.Unlock()
-	CcLogger.Info("name:%s,wait with timeout start\n", c.name)
+
 	select {
 	case <-n:
 	case <-time.After(t):
+		CcLogger.Info("name:%s,wait with timeout\n", c.name)
 	}
 	c.locker.Lock()
 }
@@ -74,8 +81,6 @@ func (c *condTimeout) Signal() {
 	n := c.NotifyChan()
 	select {
 	case n <- struct{}{}:
-		CcLogger.Info("name:%s,signal ok\n", c.name)
 	default:
-		CcLogger.Info("name:%s,signal lost\n", c.name)
 	}
 }

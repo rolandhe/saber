@@ -1,3 +1,6 @@
+// Package gocc, Golang concurrent tools like java juc.
+//
+// Copyright 2023 The saber Authors. All rights reserved.
 package gocc
 
 import (
@@ -11,20 +14,10 @@ var (
 	TaskCancelledError = errors.New("future task is cancelled")
 )
 
-type Future struct {
-	ch           chan struct{}
-	result       *taskResult
-	grpNotify    *notify
-	canceledFlag atomic.Bool
-}
-
-func NewFutureGroup(count int) *FutureGroup {
+func NewFutureGroup(count uint64) *FutureGroup {
 	return &FutureGroup{
-		notifier: &notify{
-			counter:    int64(count),
-			notifyChan: make(chan struct{}),
-		},
-		total: uint(count),
+		notifier: NewCountdownLatch(int64(count)),
+		total:    int64(count),
 	}
 }
 
@@ -36,11 +29,18 @@ func newFuture() *Future {
 
 func newFutureWithGroup(g *FutureGroup) *Future {
 	future := &Future{
-		ch:        make(chan struct{}),
-		grpNotify: g.notifier,
+		ch:            make(chan struct{}),
+		groupNotifier: g.notifier,
 	}
 	g.add(future)
 	return future
+}
+
+type Future struct {
+	ch            chan struct{}
+	result        *taskResult
+	groupNotifier *CountdownLatch
+	canceledFlag  atomic.Bool
 }
 
 func (f *Future) Get() (any, error) {
@@ -105,62 +105,42 @@ func (f *Future) GetTimeout(d time.Duration) (any, error) {
 func (f *Future) accept(v *taskResult) {
 	f.result = v
 	close(f.ch)
-	if f.grpNotify != nil {
-		f.grpNotify.notifyOne()
-	}
-}
-
-type notify struct {
-	counter    int64
-	notifyChan chan struct{}
-}
-
-func (n *notify) notifyOne() {
-	c := atomic.AddInt64(&n.counter, -1)
-	if c == 0 {
-		close(n.notifyChan)
+	if f.groupNotifier != nil {
+		f.groupNotifier.Down()
 	}
 }
 
 type FutureGroup struct {
 	futureGroup []*Future
-	notifier    *notify
-	total       uint
+	notifier    *CountdownLatch
+	total       int64
 }
 
 func (fg *FutureGroup) GetFutures() ([]*Future, bool) {
-	ok := fg.Wait()
+	ok := fg.TryWait()
 	if !ok {
 		return nil, false
 	}
 	return fg.futureGroup, true
 }
 
-func (fg *FutureGroup) WaitUntil() {
+func (fg *FutureGroup) Wait() {
 	fg.check()
-
-	<-fg.notifier.notifyChan
+	fg.notifier.Wait()
 }
 
-func (fg *FutureGroup) Wait() bool {
+func (fg *FutureGroup) TryWait() bool {
 	fg.check()
-	select {
-	case <-fg.notifier.notifyChan:
-		return true
-	default:
-		return false
-	}
+	return fg.notifier.TryWait()
 }
 
 func (fg *FutureGroup) WaitTimeout(timeout time.Duration) error {
 	fg.check()
 
-	select {
-	case <-fg.notifier.notifyChan:
+	if fg.notifier.WaitTimeout(timeout) {
 		return nil
-	case <-time.After(timeout):
-		return TimeoutError
 	}
+	return TimeoutError
 }
 func (fg *FutureGroup) Cancel() {
 	for _, future := range fg.futureGroup {

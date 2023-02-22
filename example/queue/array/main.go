@@ -33,7 +33,7 @@ func consumerWaitArrayQ() {
 	ok := q.Offer(time.Now().UnixNano())
 	log.Printf("offer:%v\n", ok)
 
-	waiter.WaitUtil()
+	waiter.Wait()
 }
 
 func productAndConsumerUsingArrayQ() {
@@ -70,7 +70,7 @@ func productAndConsumerUsingQueue(q gocc.BlockingQueue[int]) {
 		}
 	}
 
-	waiter.WaitUtil()
+	waiter.Wait()
 	cost := time.Now().UnixNano() - start
 	fmt.Printf("end, cost %d nano\n", cost)
 }

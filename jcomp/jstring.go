@@ -1,3 +1,8 @@
+// Package jcomp, compatible with java string.
+//
+// Copyright 2023 The saber Authors. All rights reserved.
+//
+
 package jcomp
 
 import (

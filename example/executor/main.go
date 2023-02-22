@@ -44,7 +44,7 @@ func execGroupTask() {
 		}
 	}
 
-	fg.WaitUntil()
+	fg.Wait()
 	futures, _ := fg.GetFutures()
 	for _, f := range futures {
 		v, _ := f.Get()

@@ -66,7 +66,7 @@ func execGroupTask(q gocc.BlockingQueue[*gocc.ExecTask]) {
 		}
 	}
 
-	fg.WaitUntil()
+	fg.Wait()
 	futures, _ := fg.GetFutures()
 	for _, f := range futures {
 		v, _ := f.Get()

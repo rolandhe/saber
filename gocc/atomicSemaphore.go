@@ -1,3 +1,8 @@
+// Package gocc, Golang concurrent tools like java juc.
+//
+// Copyright 2023 The saber Authors. All rights reserved.
+//
+
 package gocc
 
 import (
@@ -8,8 +13,6 @@ import (
 // unstable, 推荐使用NewDefaultSemaphore
 
 const sleepFixTime = time.Millisecond * 1
-
-// unstable, 推荐使用NewDefaultSemaphore
 
 func NewAtomicSemaphore(limit uint) Semaphore {
 	return &semaphoreAtomic{
@@ -23,7 +26,7 @@ type semaphoreAtomic struct {
 	counter int32
 }
 
-func (s *semaphoreAtomic) Acquire() bool {
+func (s *semaphoreAtomic) TryAcquire() bool {
 	c := atomic.AddInt32(&s.counter, 1)
 	if c <= s.limit {
 		return true
@@ -34,7 +37,11 @@ func (s *semaphoreAtomic) Acquire() bool {
 
 func (s *semaphoreAtomic) AcquireTimeout(d time.Duration) bool {
 	if d < 0 {
-		panic("invalid timeout")
+		s.Acquire()
+		return true
+	}
+	if d == 0 {
+		return s.TryAcquire()
 	}
 	rest := d
 	for {
@@ -56,7 +63,7 @@ func (s *semaphoreAtomic) AcquireTimeout(d time.Duration) bool {
 	return false
 }
 
-func (s *semaphoreAtomic) AcquireUntil() {
+func (s *semaphoreAtomic) Acquire() {
 	for {
 		c := atomic.AddInt32(&s.counter, 1)
 		if c <= s.limit {
