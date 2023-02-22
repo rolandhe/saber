@@ -51,7 +51,8 @@ func (s *semaphoreChan) AcquireTimeout(d time.Duration) bool {
 		return s.TryAcquire()
 	}
 	if d < 0 {
-		panic("invalid timeout")
+		s.Acquire()
+		return true
 	}
 
 	select {
