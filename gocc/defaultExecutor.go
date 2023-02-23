@@ -67,7 +67,6 @@ func (et *chanExecutor) ExecuteInGroup(task Task, g *FutureGroup) (*Future, bool
 		return nil, false
 	}
 	future := newFutureWithGroup(g)
-	g.add(future)
 	go runTask(task, future, et.concurrentLimit)
 	return future, true
 }

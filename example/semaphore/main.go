@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/rolandhe/saber/gocc"
 	"log"
 	"sync"
@@ -11,6 +12,18 @@ func main() {
 	//waitUntil()
 	waitUntilChan()
 	//waitWithTimeout()
+	start()
+}
+
+func start() {
+	ch := make(chan struct{})
+	v := 1
+	go func() {
+		fmt.Println(v)
+		ch <- struct{}{}
+	}()
+	v = 12
+	<-ch
 }
 
 func waitUntil() {
