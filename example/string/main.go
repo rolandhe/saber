@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/rolandhe/saber/jcomp"
-	"github.com/rolandhe/saber/strutils"
+	"github.com/rolandhe/saber/utils/strutils"
 )
 
 func main() {
