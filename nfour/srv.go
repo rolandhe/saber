@@ -143,7 +143,7 @@ func writeCore(res []byte, seqId uint64, conn net.Conn, timeout time.Duration) b
 
 	plen := len(res)
 	payload := make([]byte, plen+12)
-	copy(payload, bytutil.ToBytes(int32(plen)))
+	copy(payload, bytutil.Int32ToBytes(int32(plen)))
 	copy(payload[4:], bytutil.Uint64ToBytes(seqId))
 	copy(payload[12:], res)
 

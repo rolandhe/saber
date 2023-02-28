@@ -32,7 +32,7 @@ func ToUInt64(buf []byte) (uint64, error) {
 	return ret, nil
 }
 
-func ToBytes(v int32) []byte {
+func Int32ToBytes(v int32) []byte {
 	buf := make([]byte, 4, 4)
 	uv := uint32(v)
 	buf[0] = byte(uv & mask)
