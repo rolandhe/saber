@@ -5,7 +5,6 @@ import (
 	"github.com/rolandhe/saber/gocc"
 	"github.com/rolandhe/saber/utils/bytutil"
 	"io"
-	"log"
 	"net"
 	"os"
 	"strconv"
@@ -44,15 +43,15 @@ func Startup(port int, conf *Conf) {
 	ln, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
 		// handle error
-		log.Println(err)
+		nFourLogger.InfoLn(err)
 		return
 	}
-	log.Printf("listen tcp port %d,and next to accept\n", port)
+	nFourLogger.Info("listen tcp port %d,and next to accept\n", port)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
 			// handle error
-			log.Println(err)
+			nFourLogger.InfoLn(err)
 		}
 		handleConnection(conn, conf.concurrent.TotalTokens(), conf)
 	}
@@ -66,7 +65,7 @@ func handleConnection(conn net.Conn, limitPerConn uint, conf *Conf) {
 }
 
 func readConn(conn net.Conn, writeCh chan *result, closeCh chan struct{}, conf *Conf) {
-	log.Println("start to read header info...")
+	nFourLogger.InfoLn("start to read header info...")
 	header := make([]byte, 12)
 	for {
 		conn.SetReadDeadline(time.Now().Add(conf.IdleTimeout))
@@ -150,10 +149,10 @@ func writeCore(res []byte, seqId uint64, conn net.Conn, timeout time.Duration) b
 	n, err := conn.Write(payload)
 	if err != nil {
 		conn.Close()
-		log.Println(err)
+		nFourLogger.InfoLn(err)
 		return false
 	}
-	log.Printf("write data:%d, expect:%d\n", n, plen+12)
+	nFourLogger.Info("write data:%d, expect:%d\n", n, plen+12)
 	return true
 }
 
@@ -172,11 +171,11 @@ func readPayload(conn net.Conn, buff []byte, expectLen int, notHalt bool) error 
 		n, err := conn.Read(buff)
 		if err != nil {
 			if !notHalt && errors.Is(err, os.ErrDeadlineExceeded) {
-				log.Println(err)
+				nFourLogger.InfoLn(err)
 				return err
 			}
 			if errors.Is(err, io.EOF) {
-				log.Println("peer closed")
+				nFourLogger.InfoLn("peer closed")
 				return peerCloseError
 			}
 			return err

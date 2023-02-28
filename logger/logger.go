@@ -3,24 +3,22 @@
 // Copyright 2023 The saber Authors. All rights reserved.
 //
 
-package gocc
+package logger
 
 import "log"
-
-var CcLogger = &defaultLogger{}
 
 type Logger interface {
 	Info(format string, v ...any)
 	InfoLn(v ...any)
 }
 
-type defaultLogger struct {
+type DefaultLogger struct {
 }
 
-func (logger *defaultLogger) Info(format string, v ...any) {
+func (logger *DefaultLogger) Info(format string, v ...any) {
 	log.Printf(format, v...)
 }
 
-func (logger *defaultLogger) InfoLn(v ...any) {
+func (logger *DefaultLogger) InfoLn(v ...any) {
 	log.Println(v...)
 }

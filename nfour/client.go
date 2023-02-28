@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/rolandhe/saber/gocc"
 	"github.com/rolandhe/saber/utils/bytutil"
-	"log"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -42,7 +41,7 @@ func NewClient(addr string, conf *ClientConf) (*Client, error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		// handle error
-		log.Println(err)
+		nFourLogger.InfoLn(err)
 		return nil, err
 	}
 
@@ -130,14 +129,14 @@ func asyncSender(c *Client) {
 				releaseWait = true
 				break
 			}
-			log.Printf("send success\n")
+			nFourLogger.Info("send success\n")
 		case <-c.shutDown:
 			c.conn.Close()
 			releaseWait = true
-			log.Println("shut down")
+			nFourLogger.InfoLn("shut down")
 			break
 		case <-time.After(c.conf.IdleTimeout):
-			log.Println("wait send task timeout")
+			nFourLogger.InfoLn("wait send task timeout")
 		}
 	}
 	if releaseWait {
@@ -169,7 +168,7 @@ func asyncReader(c *Client) {
 
 		f, ok := c.cache.Load(seqId)
 		if !ok {
-			log.Println("warning: lost seqId with read result", seqId)
+			nFourLogger.InfoLn("warning: lost seqId with read result", seqId)
 			continue
 		}
 		if c.IsShutdown() {
