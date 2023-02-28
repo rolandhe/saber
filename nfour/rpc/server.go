@@ -1,3 +1,7 @@
+// Package rpc, rpc abstraction basing nfour
+//
+// Copyright 2023 The saber Authors. All rights reserved.
+
 package rpc
 
 import (

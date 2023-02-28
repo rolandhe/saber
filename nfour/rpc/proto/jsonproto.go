@@ -1,3 +1,7 @@
+// Package proto, rpc implementation basing rpc abstraction
+//
+// Copyright 2023 The saber Authors. All rights reserved.
+
 package proto
 
 import (

@@ -1,6 +1,12 @@
+// Package sortutil, sort  tool
+//
+// Copyright 2023 The saber Authors. All rights reserved.
+
 package sortutil
 
 import "sort"
+
+// 来自官方文档的例子，很巧妙的使用函数的方法实现类似泛型的排序，妙
 
 type Cmp[T any] func(p1, p2 *T) bool
 
