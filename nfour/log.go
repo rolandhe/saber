@@ -2,4 +2,4 @@ package nfour
 
 import "github.com/rolandhe/saber/logger"
 
-var nFourLogger = &logger.DefaultLogger{}
+var NFourLogger = &logger.DefaultLogger{}

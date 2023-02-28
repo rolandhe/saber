@@ -11,11 +11,11 @@ import (
 )
 
 var (
-	TaskTimeout    = errors.New("timeout")
-	ClientShutdown = errors.New("client shut down")
+	TaskTimeout   = errors.New("timeout")
+	TransShutdown = errors.New("transport shut down")
 )
 
-type ClientConf struct {
+type TransConf struct {
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
 	IdleTimeout  time.Duration
@@ -28,8 +28,8 @@ type ReqTimeout struct {
 	WaitConcurrent time.Duration
 }
 
-func NewClientConf(rwTimeout time.Duration, concurrent uint) *ClientConf {
-	return &ClientConf{
+func NewTransConf(rwTimeout time.Duration, concurrent uint) *TransConf {
+	return &TransConf{
 		ReadTimeout:  rwTimeout,
 		WriteTimeout: rwTimeout,
 		IdleTimeout:  time.Minute * 30,
@@ -37,30 +37,30 @@ func NewClientConf(rwTimeout time.Duration, concurrent uint) *ClientConf {
 	}
 }
 
-func NewClient(addr string, conf *ClientConf) (*Client, error) {
+func NewTrans(addr string, conf *TransConf) (*Trans, error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		// handle error
-		nFourLogger.InfoLn(err)
+		NFourLogger.InfoLn(err)
 		return nil, err
 	}
 
-	c := &Client{
+	t := &Trans{
 		conn:     conn,
 		conf:     conf,
 		sendCh:   make(chan *sendingTask, conf.concurrent.TotalTokens()),
 		shutDown: make(chan struct{}),
 	}
 
-	go asyncSender(c)
-	go asyncReader(c)
+	go asyncSender(t)
+	go asyncReader(t)
 
-	return c, nil
+	return t, nil
 }
 
-type Client struct {
+type Trans struct {
 	conn     net.Conn
-	conf     *ClientConf
+	conf     *TransConf
 	sendCh   chan *sendingTask
 	shutDown chan struct{}
 	status   int32
@@ -68,42 +68,42 @@ type Client struct {
 	idGen    atomic.Uint64
 }
 
-func (c *Client) Shutdown() {
-	if atomic.CompareAndSwapInt32(&c.status, 0, 1) {
-		close(c.shutDown)
+func (t *Trans) Shutdown() {
+	if atomic.CompareAndSwapInt32(&t.status, 0, 1) {
+		close(t.shutDown)
 	}
 }
 
-func (c *Client) IsShutdown() bool {
-	return atomic.LoadInt32(&c.status) == 1
+func (t *Trans) IsShutdown() bool {
+	return atomic.LoadInt32(&t.status) == 1
 }
 
-func (c *Client) SendPayload(req []byte, reqTimeout *ReqTimeout) ([]byte, error) {
-	if c.IsShutdown() {
-		return nil, ClientShutdown
+func (t *Trans) SendPayload(req []byte, reqTimeout *ReqTimeout) ([]byte, error) {
+	if t.IsShutdown() {
+		return nil, TransShutdown
 	}
 	if reqTimeout == nil {
 		reqTimeout = &ReqTimeout{}
 	}
-	if !c.conf.concurrent.AcquireTimeout(reqTimeout.WaitConcurrent) {
+	if !t.conf.concurrent.AcquireTimeout(reqTimeout.WaitConcurrent) {
 		return nil, ExceedConcurrentError
 	}
 	if reqTimeout.WriteTimeout <= 0 {
-		reqTimeout.WriteTimeout = c.conf.WriteTimeout
+		reqTimeout.WriteTimeout = t.conf.WriteTimeout
 	}
 	if reqTimeout.ReadTimeout <= 0 {
-		reqTimeout.ReadTimeout = c.conf.ReadTimeout
+		reqTimeout.ReadTimeout = t.conf.ReadTimeout
 	}
-	if c.IsShutdown() {
-		return nil, ClientShutdown
+	if t.IsShutdown() {
+		return nil, TransShutdown
 	}
-	seqId := c.idGen.Add(1)
+	seqId := t.idGen.Add(1)
 	fu := &future{
 		seqId:    seqId,
 		notifier: make(chan struct{}),
 	}
-	c.cache.Store(seqId, fu)
-	c.sendCh <- &sendingTask{
+	t.cache.Store(seqId, fu)
+	t.sendCh <- &sendingTask{
 		seqId:   seqId,
 		payload: req,
 		timeout: reqTimeout.WriteTimeout,
@@ -114,33 +114,33 @@ func (c *Client) SendPayload(req []byte, reqTimeout *ReqTimeout) ([]byte, error)
 // asyncSender/asyncReader以及外部都可以调用Shutdown发送关闭指令
 // 但由sender 最终来关闭连接
 // asyncSender识别到连接关闭指令后消除等待结果的任务
-func asyncSender(c *Client) {
+func asyncSender(trans *Trans) {
 	releaseWait := false
 	for {
-		if c.IsShutdown() {
-			c.conn.Close()
+		if trans.IsShutdown() {
+			trans.conn.Close()
 			releaseWait = true
 			break
 		}
 		select {
-		case task := <-c.sendCh:
-			if !writeCore(task.payload, task.seqId, c.conn, task.timeout) {
-				c.Shutdown()
+		case task := <-trans.sendCh:
+			if !writeCore(task.payload, task.seqId, trans.conn, task.timeout) {
+				trans.Shutdown()
 				releaseWait = true
 				break
 			}
-			nFourLogger.Info("send success\n")
-		case <-c.shutDown:
-			c.conn.Close()
+			NFourLogger.Info("send success\n")
+		case <-trans.shutDown:
+			trans.conn.Close()
 			releaseWait = true
-			nFourLogger.InfoLn("shut down")
+			NFourLogger.InfoLn("shut down")
 			break
-		case <-time.After(c.conf.IdleTimeout):
-			nFourLogger.InfoLn("wait send task timeout")
+		case <-time.After(trans.conf.IdleTimeout):
+			NFourLogger.InfoLn("wait send task timeout")
 		}
 	}
 	if releaseWait {
-		c.cache.Range(func(key, value any) bool {
+		trans.cache.Range(func(key, value any) bool {
 			fu := value.(*future)
 			fu.accept(nil, TaskTimeout)
 			return true
@@ -148,38 +148,38 @@ func asyncSender(c *Client) {
 	}
 }
 
-func asyncReader(c *Client) {
+func asyncReader(trans *Trans) {
 	header := make([]byte, 12)
 
 	for {
-		if c.IsShutdown() {
+		if trans.IsShutdown() {
 			break
 		}
-		c.conn.SetReadDeadline(time.Now().Add(c.conf.IdleTimeout))
-		if readPayload(c.conn, header, 12, true) != nil {
-			c.Shutdown()
+		trans.conn.SetReadDeadline(time.Now().Add(trans.conf.IdleTimeout))
+		if readPayload(trans.conn, header, 12, true) != nil {
+			trans.Shutdown()
 			break
 		}
 		l, _ := bytutil.ToInt32(header[:4])
 		bodyBuff := make([]byte, l, l)
 		seqId, err := bytutil.ToUInt64(header[4:])
-		c.conn.SetReadDeadline(time.Now().Add(c.conf.ReadTimeout))
-		err = readPayload(c.conn, bodyBuff, int(l), false)
+		trans.conn.SetReadDeadline(time.Now().Add(trans.conf.ReadTimeout))
+		err = readPayload(trans.conn, bodyBuff, int(l), false)
 
-		f, ok := c.cache.Load(seqId)
+		f, ok := trans.cache.Load(seqId)
 		if !ok {
-			nFourLogger.InfoLn("warning: lost seqId with read result", seqId)
+			NFourLogger.InfoLn("warning: lost seqId with read result", seqId)
 			continue
 		}
-		if c.IsShutdown() {
+		if trans.IsShutdown() {
 			break
 		}
-		c.cache.Delete(seqId)
+		trans.cache.Delete(seqId)
 		fu := f.(*future)
 		fu.accept(bodyBuff, err)
-		c.conf.concurrent.Release()
+		trans.conf.concurrent.Release()
 		if err != nil {
-			c.Shutdown()
+			trans.Shutdown()
 			break
 		}
 	}

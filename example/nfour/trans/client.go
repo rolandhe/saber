@@ -15,8 +15,8 @@ func main() {
 	reqs := buildRequests(5)
 	fmt.Println(reqs)
 
-	conf := nfour.NewClientConf(time.Minute*2, 200)
-	c, err := nfour.NewClient("localhost:11011", conf)
+	conf := nfour.NewTransConf(time.Minute*2, 200)
+	c, err := nfour.NewTrans("localhost:11011", conf)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -27,7 +27,7 @@ func main() {
 	c.Shutdown()
 }
 
-func concurrentSend(concur int, c *nfour.Client) {
+func concurrentSend(concur int, c *nfour.Trans) {
 	reqs := buildRequests(concur)
 	reqTimeout := &nfour.ReqTimeout{
 		WaitConcurrent: time.Millisecond * 1000,
@@ -103,7 +103,7 @@ func buildRequests(num int) []*req {
 	return ret
 }
 
-func send(c *nfour.Client, req string) {
+func send(c *nfour.Trans, req string) {
 	resp, err := c.SendPayload([]byte(req), nil)
 	if err != nil {
 		fmt.Println(err)

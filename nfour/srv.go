@@ -14,13 +14,14 @@ import (
 var (
 	peerCloseError        = errors.New("peer closed")
 	ExceedConcurrentError = errors.New("exceed concurrent")
+	SemaWaitTime          = time.Millisecond * 0
 )
 
 type Working func(task *Task) ([]byte, error)
 type HandleError func(err error) []byte
 
-func NewConf(working Working, errHandle HandleError, concurrent uint) *Conf {
-	return &Conf{
+func NewSrvConf(working Working, errHandle HandleError, concurrent uint) *SrvConf {
+	return &SrvConf{
 		working,
 		errHandle,
 		time.Millisecond * 2000,
@@ -30,7 +31,7 @@ func NewConf(working Working, errHandle HandleError, concurrent uint) *Conf {
 	}
 }
 
-type Conf struct {
+type SrvConf struct {
 	Working      Working
 	ErrHandle    HandleError
 	ReadTimeout  time.Duration
@@ -39,33 +40,33 @@ type Conf struct {
 	concurrent   gocc.Semaphore
 }
 
-func Startup(port int, conf *Conf) {
+func Startup(port int, conf *SrvConf) {
 	ln, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
 		// handle error
-		nFourLogger.InfoLn(err)
+		NFourLogger.InfoLn(err)
 		return
 	}
-	nFourLogger.Info("listen tcp port %d,and next to accept\n", port)
+	NFourLogger.Info("listen tcp port %d,and next to accept\n", port)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
 			// handle error
-			nFourLogger.InfoLn(err)
+			NFourLogger.InfoLn(err)
 		}
 		handleConnection(conn, conf.concurrent.TotalTokens(), conf)
 	}
 }
 
-func handleConnection(conn net.Conn, limitPerConn uint, conf *Conf) {
+func handleConnection(conn net.Conn, limitPerConn uint, conf *SrvConf) {
 	writeCh := make(chan *result, limitPerConn)
 	closeCh := make(chan struct{})
 	go readConn(conn, writeCh, closeCh, conf)
 	go writeConn(conn, writeCh, closeCh, conf)
 }
 
-func readConn(conn net.Conn, writeCh chan *result, closeCh chan struct{}, conf *Conf) {
-	nFourLogger.InfoLn("start to read header info...")
+func readConn(conn net.Conn, writeCh chan *result, closeCh chan struct{}, conf *SrvConf) {
+	NFourLogger.InfoLn("start to read header info...")
 	header := make([]byte, 12)
 	for {
 		conn.SetReadDeadline(time.Now().Add(conf.IdleTimeout))
@@ -85,7 +86,7 @@ func readConn(conn net.Conn, writeCh chan *result, closeCh chan struct{}, conf *
 			break
 		}
 		seqId, _ := bytutil.ToUInt64(header[4:])
-		if !conf.concurrent.TryAcquire() {
+		if !conf.concurrent.AcquireTimeout(SemaWaitTime) {
 			writeCh <- &result{true, seqId, conf.ErrHandle(ExceedConcurrentError)}
 			continue
 		}
@@ -93,7 +94,7 @@ func readConn(conn net.Conn, writeCh chan *result, closeCh chan struct{}, conf *
 	}
 }
 
-func doBiz(bodyBuff []byte, writeCh chan *result, conf *Conf, seqId uint64) {
+func doBiz(bodyBuff []byte, writeCh chan *result, conf *SrvConf, seqId uint64) {
 	task := &Task{bodyBuff}
 	resBody, err := conf.Working(task)
 
@@ -105,7 +106,7 @@ func doBiz(bodyBuff []byte, writeCh chan *result, conf *Conf, seqId uint64) {
 
 // readConn 感知是否需要关闭连接后，通过closeCh来通知,writeConn得到消息后最终关闭连接
 // writeConn识别到网络失败，关闭连接后，等待readConn感知到后再通知writeConn是否资源
-func writeConn(conn net.Conn, writeCh chan *result, closeCh chan struct{}, conf *Conf) {
+func writeConn(conn net.Conn, writeCh chan *result, closeCh chan struct{}, conf *SrvConf) {
 	releaseTask := false
 	for {
 		if isClose(closeCh) {
@@ -149,10 +150,10 @@ func writeCore(res []byte, seqId uint64, conn net.Conn, timeout time.Duration) b
 	n, err := conn.Write(payload)
 	if err != nil {
 		conn.Close()
-		nFourLogger.InfoLn(err)
+		NFourLogger.InfoLn(err)
 		return false
 	}
-	nFourLogger.Info("write data:%d, expect:%d\n", n, plen+12)
+	NFourLogger.Info("write data:%d, expect:%d\n", n, plen+12)
 	return true
 }
 
@@ -171,11 +172,11 @@ func readPayload(conn net.Conn, buff []byte, expectLen int, notHalt bool) error 
 		n, err := conn.Read(buff)
 		if err != nil {
 			if !notHalt && errors.Is(err, os.ErrDeadlineExceeded) {
-				nFourLogger.InfoLn(err)
+				NFourLogger.InfoLn(err)
 				return err
 			}
 			if errors.Is(err, io.EOF) {
-				nFourLogger.InfoLn("peer closed")
+				NFourLogger.InfoLn("peer closed")
 				return peerCloseError
 			}
 			return err
