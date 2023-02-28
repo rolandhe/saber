@@ -129,7 +129,7 @@ func asyncSender(trans *Trans) {
 				releaseWait = true
 				break
 			}
-			NFourLogger.Info("send success\n")
+			//NFourLogger.Info("send success\n")
 		case <-trans.shutDown:
 			trans.conn.Close()
 			releaseWait = true

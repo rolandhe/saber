@@ -10,7 +10,7 @@ func main() {
 
 	working, router := proto.NewJsonRpcSrvWorking(handler.JsonRpcErrHandler)
 	handler.RegisterAll(router)
-	conf := nfour.NewSrvConf(working, handler.TransErrHandler, 2000)
+	conf := nfour.NewSrvConf(working, handler.TransErrHandler, 5000)
 
 	nfour.Startup(11011, conf)
 }

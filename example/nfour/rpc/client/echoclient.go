@@ -5,6 +5,7 @@ import (
 	"github.com/rolandhe/saber/nfour"
 	"github.com/rolandhe/saber/nfour/rpc/proto"
 	"github.com/rolandhe/saber/utils/sortutil"
+	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -12,18 +13,42 @@ import (
 )
 
 func main() {
-	conf := nfour.NewTransConf(time.Second*2, 500)
+	wait := &sync.WaitGroup{}
+	wait.Add(1)
+
+	start := time.Now().UnixNano()
+	go func() {
+		log.Println("this is a start")
+		core()
+		wait.Done()
+		log.Println("this is a")
+	}()
+	go func() {
+		log.Println("this is b start")
+		core()
+		wait.Done()
+		log.Println("this is b")
+	}()
+
+	wait.Wait()
+
+	fmt.Println("xxxx---", time.Now().UnixNano()-start)
+}
+
+func core() {
+	conf := nfour.NewTransConf(time.Second*2, 3000)
 	t, err := nfour.NewTrans("localhost:11011", conf)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 
 	client := proto.NewJsonRpcClient(t)
 
-	concurrentSend(30000, client)
+	concurrentSend(50000, client)
 
 	client.Shutdown()
+
 }
 
 type req struct {
@@ -44,8 +69,12 @@ func concurrentSend(taskCount int, c proto.JsonClient) {
 
 	var rarray []string
 
+	start := time.Now().UnixNano()
+	trigger := sync.WaitGroup{}
+	trigger.Add(1)
 	for _, req := range reqs {
 		go func(r *proto.JsonProtoReq) {
+			trigger.Wait()
 			s := ""
 			tryCount := 0
 			for {
@@ -71,8 +100,12 @@ func concurrentSend(taskCount int, c proto.JsonClient) {
 		}(req)
 
 	}
+	trigger.Done()
+
 	wg.Wait()
-	fmt.Println()
+
+	cost := time.Now().UnixNano() - start
+
 	fmt.Println("--------------------------------")
 	nArrays := convertBatchResult(rarray)
 	errCount := 0
@@ -82,14 +115,15 @@ func concurrentSend(taskCount int, c proto.JsonClient) {
 		if strings.HasPrefix(v.val, "err:") {
 			errCount++
 		} else {
-			fmt.Println(v.val)
+			//fmt.Println(v.val)
 			if (v.sortId - last) != 1 {
 				lostCount++
 			}
 			last = v.sortId
 		}
 	}
-	fmt.Printf("......end(%d)..error(%d)..lost(%d)..\n", len(rarray), errCount, lostCount)
+	log.Printf("......end(%d)..error(%d)..lost(%d)..\n", len(rarray), errCount, lostCount)
+	log.Println(cost, "nano")
 }
 
 func convertBatchResult(res []string) []*req {

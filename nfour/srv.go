@@ -147,13 +147,13 @@ func writeCore(res []byte, seqId uint64, conn net.Conn, timeout time.Duration) b
 	copy(payload[4:], bytutil.Uint64ToBytes(seqId))
 	copy(payload[12:], res)
 
-	n, err := conn.Write(payload)
+	_, err := conn.Write(payload)
 	if err != nil {
 		conn.Close()
 		NFourLogger.InfoLn(err)
 		return false
 	}
-	NFourLogger.Info("write data:%d, expect:%d\n", n, plen+12)
+	//NFourLogger.Info("write data:%d, expect:%d\n", n, plen+12)
 	return true
 }
 
