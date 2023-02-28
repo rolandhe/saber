@@ -21,7 +21,7 @@ func main() {
 
 	client := proto.NewJsonRpcClient(t)
 
-	concurrentSend(100000, client)
+	concurrentSend(30000, client)
 
 	client.Shutdown()
 }
@@ -76,14 +76,20 @@ func concurrentSend(taskCount int, c proto.JsonClient) {
 	fmt.Println("--------------------------------")
 	nArrays := convertBatchResult(rarray)
 	errCount := 0
+	last := -1
+	lostCount := 0
 	for _, v := range nArrays {
 		if strings.HasPrefix(v.val, "err:") {
 			errCount++
 		} else {
 			fmt.Println(v.val)
+			if (v.sortId - last) != 1 {
+				lostCount++
+			}
+			last = v.sortId
 		}
 	}
-	fmt.Printf("......end(%d)..error(%d)..\n", len(rarray), errCount)
+	fmt.Printf("......end(%d)..error(%d)..lost(%d)..\n", len(rarray), errCount, lostCount)
 }
 
 func convertBatchResult(res []string) []*req {
