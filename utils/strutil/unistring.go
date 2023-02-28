@@ -3,7 +3,7 @@
 // Copyright 2023 The saber Authors. All rights reserved.
 //
 
-package strutils
+package strutil
 
 import (
 	"reflect"
