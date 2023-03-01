@@ -14,7 +14,7 @@ import (
 
 func main() {
 	wait := &sync.WaitGroup{}
-	wait.Add(1)
+	wait.Add(2)
 
 	start := time.Now().UnixNano()
 	go func() {
@@ -31,12 +31,13 @@ func main() {
 	}()
 
 	wait.Wait()
+	//core()
 
 	fmt.Println("xxxx---", time.Now().UnixNano()-start)
 }
 
 func core() {
-	conf := nfour.NewTransConf(time.Second*2, 3000)
+	conf := nfour.NewTransConf(time.Second*2, 5000)
 	t, err := nfour.NewTrans("localhost:11011", conf)
 	if err != nil {
 		log.Println(err)

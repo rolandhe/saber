@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/rolandhe/saber/jcomp"
-	"github.com/rolandhe/saber/utils/strutils"
+	"github.com/rolandhe/saber/utils/strutil"
 )
 
 func main() {
@@ -29,12 +29,12 @@ func javaLength() {
 	s := "刘德华 andi lou"
 	l, _ := jcomp.JavaStringLen(s)
 
-	fmt.Println(l, len(s), strutils.GetRuneLenOfString(s))
+	fmt.Println(l, len(s), strutil.GetRuneLenOfString(s))
 }
 
 func quickString() {
 	s := "刘德华 andi lou"
-	b := strutils.DetachBytesString(s)
-	s1 := strutils.AttachBytesString(b)
+	b := strutil.DetachBytesString(s)
+	s1 := strutil.AttachBytesString(b)
 	fmt.Println(s1)
 }

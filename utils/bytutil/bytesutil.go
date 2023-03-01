@@ -1,3 +1,7 @@
+// Package bytutil, byte operate tool
+//
+// Copyright 2023 The saber Authors. All rights reserved.
+
 package bytutil
 
 import "errors"

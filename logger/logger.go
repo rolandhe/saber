@@ -1,4 +1,4 @@
-// Package gocc, Golang concurrent tools like java juc.
+// Package logger
 //
 // Copyright 2023 The saber Authors. All rights reserved.
 //
