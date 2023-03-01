@@ -16,9 +16,12 @@ type DefaultLogger struct {
 }
 
 func (logger *DefaultLogger) Info(format string, v ...any) {
-	log.Printf(format, v...)
+	log.Printf("[Info] "+format, v...)
 }
 
 func (logger *DefaultLogger) InfoLn(v ...any) {
-	log.Println(v...)
+	merge := make([]any, 0, len(v)+1)
+	merge = append(merge, "[Info] ")
+	merge = append(merge, v...)
+	log.Println(merge...)
 }
