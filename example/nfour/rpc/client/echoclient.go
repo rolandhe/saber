@@ -13,27 +13,26 @@ import (
 )
 
 func main() {
-	wait := &sync.WaitGroup{}
-	wait.Add(2)
+	//wait := &sync.WaitGroup{}
+	//wait.Add(2)
+	//start := time.Now().UnixNano()
+	//go func() {
+	//	log.Println("this is a start")
+	//	core()
+	//	wait.Done()
+	//	log.Println("this is a")
+	//}()
+	//go func() {
+	//	log.Println("this is b start")
+	//	core()
+	//	wait.Done()
+	//	log.Println("this is b")
+	//}()
+	//
+	//wait.Wait()
+	//fmt.Println("xxxx---", time.Now().UnixNano()-start)
 
-	start := time.Now().UnixNano()
-	go func() {
-		log.Println("this is a start")
-		core()
-		wait.Done()
-		log.Println("this is a")
-	}()
-	go func() {
-		log.Println("this is b start")
-		core()
-		wait.Done()
-		log.Println("this is b")
-	}()
-
-	wait.Wait()
-	//core()
-
-	fmt.Println("xxxx---", time.Now().UnixNano()-start)
+	core()
 }
 
 func core() {

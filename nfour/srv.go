@@ -89,7 +89,7 @@ func readConn(conn net.Conn, writeCh chan *result, closeCh chan struct{}, conf *
 			close(writeCh)
 			break
 		}
-		seqId, _ := bytutil.ToUInt64(header[4:])
+		seqId, _ := bytutil.ToUint64(header[4:])
 		if !conf.concurrent.AcquireTimeout(SemaWaitTime) {
 			writeCh <- &result{true, seqId, conf.ErrHandle(ExceedConcurrentError)}
 			continue

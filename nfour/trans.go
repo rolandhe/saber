@@ -166,7 +166,7 @@ func asyncReader(trans *Trans) {
 		}
 		l, _ := bytutil.ToInt32(header[:4])
 		bodyBuff := make([]byte, l, l)
-		seqId, err := bytutil.ToUInt64(header[4:])
+		seqId, err := bytutil.ToUint64(header[4:])
 		trans.conn.SetReadDeadline(time.Now().Add(trans.conf.ReadTimeout))
 		err = readPayload(trans.conn, bodyBuff, int(l), false)
 

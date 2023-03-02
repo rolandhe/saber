@@ -10,6 +10,12 @@ import (
 	"fmt"
 )
 
+// 兼容java String属性的工具,包括:
+// 1. java String的Length
+// 2. java String substring方法的功能
+// 3. 转换成兼容java char的数组
+// 4. java  Character类的功能
+
 const (
 	MinHighSurrogate          = rune(55296)
 	MaxHighSurrogate          = rune(56319)
@@ -20,7 +26,10 @@ const (
 	MaxCodePoint              = rune(0x10FFFF)
 )
 
+// Char 对标java char
 type Char uint16
+
+// CodePoint unicode字符集码位
 type CodePoint rune
 
 func JavaStringLen(s string) (int, error) {
@@ -32,6 +41,7 @@ func JavaSubStringToEnd(s string, start int) (string, error) {
 	return JavaSubString(s, start, -1)
 }
 
+// JavaSubString 生成子串,[start,end)
 func JavaSubString(s string, start int, end int) (string, error) {
 	content, l, err := javaStringChars(s, true)
 	if err != nil {
@@ -68,6 +78,8 @@ func JavaSubString(s string, start int, end int) (string, error) {
 	return string(retRunes), nil
 }
 
+// JavaToChars 转换一个rune(即unicode codepoint)为2个Char(即uint)
+// 兼容java Character.toChars(int codePoint)
 func JavaToChars(cp rune) ([]Char, error) {
 	ret := []Char{0, 0}
 
@@ -79,6 +91,8 @@ func JavaToChars(cp rune) ([]Char, error) {
 	return ret[:l], nil
 }
 
+// JavaCharCount 计算一个rune需要几个Char组成
+// 兼容java Character.charCount(int codePoint)
 func JavaCharCount(cp rune) int {
 	if cp >= MinSupplementaryCodePoint {
 		return 2
@@ -86,10 +100,14 @@ func JavaCharCount(cp rune) int {
 	return 1
 }
 
+// JavaCodePointAt 转换Char数组中指定位置的字符所对标的codepoint
+// 兼容java Character.codePointAt
 func JavaCodePointAt(a []Char, index int) rune {
 	return codePointAtImpl(a, index, len(a))
 }
 
+// JavaCodePoint 转换Char数组中首位置的字符所对标的codepoint
+// 兼容java Character.codePoint
 func JavaCodePoint(a []Char) rune {
 	return JavaCodePointAt(a, 0)
 }
