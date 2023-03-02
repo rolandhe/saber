@@ -154,6 +154,7 @@ func asyncSender(trans *Trans) {
 }
 
 func asyncReader(trans *Trans) {
+	fullHeaderLength := nfour.PayLoadLenBufLength + seqIdHeaderLength
 	header := make([]byte, fullHeaderLength)
 
 	for {
