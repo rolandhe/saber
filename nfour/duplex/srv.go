@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const fullHeaderLength = 12
+const seqIdHeaderLength = 8
 
 func Startup(port int, conf *nfour.SrvConf) {
 	ln, err := net.Listen("tcp", ":"+strconv.Itoa(port))
@@ -42,6 +42,7 @@ func handleConnection(conn net.Conn, limitPerConn uint, conf *nfour.SrvConf) {
 
 func readConn(conn net.Conn, writeCh chan *result, closeCh chan struct{}, conf *nfour.SrvConf) {
 	nfour.NFourLogger.DebugLn("start to read header info...")
+	fullHeaderLength := seqIdHeaderLength + nfour.PayLoadLenBufLength
 	header := make([]byte, fullHeaderLength)
 	for {
 		conn.SetReadDeadline(time.Now().Add(conf.IdleTimeout))
@@ -111,6 +112,8 @@ func writeConn(conn net.Conn, writeCh chan *result, closeCh chan struct{}, conf 
 
 func writeCore(res []byte, seqId uint64, conn net.Conn, timeout time.Duration) bool {
 	conn.SetWriteDeadline(time.Now().Add(timeout))
+
+	fullHeaderLength := nfour.PayLoadLenBufLength + seqIdHeaderLength
 
 	plen := len(res)
 	payload := make([]byte, plen+fullHeaderLength)
