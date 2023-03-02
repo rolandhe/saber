@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/rolandhe/saber/nfour"
+	"github.com/rolandhe/saber/nfour/duplex"
 	"github.com/rolandhe/saber/nfour/rpc/proto"
 	"github.com/rolandhe/saber/utils/sortutil"
 	"log"
@@ -36,8 +36,8 @@ func main() {
 }
 
 func core() {
-	conf := nfour.NewTransConf(time.Second*2, 5000)
-	t, err := nfour.NewTrans("localhost:11011", conf)
+	conf := duplex.NewTransConf(time.Second*2, 5000)
+	t, err := duplex.NewTrans("localhost:11011", conf)
 	if err != nil {
 		log.Println(err)
 		return
@@ -58,7 +58,7 @@ type req struct {
 
 func concurrentSend(taskCount int, c proto.JsonClient) {
 	reqs := buildRequests(taskCount)
-	reqTimeout := &nfour.ReqTimeout{
+	reqTimeout := &duplex.ReqTimeout{
 		WaitConcurrent: time.Millisecond * 1000,
 	}
 

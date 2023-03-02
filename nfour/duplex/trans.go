@@ -2,11 +2,12 @@
 //
 // Copyright 2023 The saber Authors. All rights reserved.
 
-package nfour
+package duplex
 
 import (
 	"errors"
 	"github.com/rolandhe/saber/gocc"
+	"github.com/rolandhe/saber/nfour"
 	"github.com/rolandhe/saber/utils/bytutil"
 	"net"
 	"sync"
@@ -45,7 +46,7 @@ func NewTrans(addr string, conf *TransConf) (*Trans, error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		// handle error
-		NFourLogger.InfoLn(err)
+		nfour.NFourLogger.InfoLn(err)
 		return nil, err
 	}
 
@@ -90,7 +91,7 @@ func (t *Trans) SendPayload(req []byte, reqTimeout *ReqTimeout) ([]byte, error) 
 		reqTimeout = &ReqTimeout{}
 	}
 	if !t.conf.concurrent.AcquireTimeout(reqTimeout.WaitConcurrent) {
-		return nil, ExceedConcurrentError
+		return nil, nfour.ExceedConcurrentError
 	}
 	if reqTimeout.WriteTimeout <= 0 {
 		reqTimeout.WriteTimeout = t.conf.WriteTimeout
@@ -133,14 +134,14 @@ func asyncSender(trans *Trans) {
 				releaseWait = true
 				break
 			}
-			//NFourLogger.Info("send success\n")
+			nfour.NFourLogger.Debug("send success\n")
 		case <-trans.shutDown:
 			trans.conn.Close()
 			releaseWait = true
-			NFourLogger.InfoLn("shut down")
+			nfour.NFourLogger.InfoLn("shut down")
 			break
 		case <-time.After(trans.conf.IdleTimeout):
-			NFourLogger.InfoLn("wait send task timeout")
+			nfour.NFourLogger.InfoLn("wait send task timeout")
 		}
 	}
 	if releaseWait {
@@ -153,26 +154,26 @@ func asyncSender(trans *Trans) {
 }
 
 func asyncReader(trans *Trans) {
-	header := make([]byte, 12)
+	header := make([]byte, fullHeaderLength)
 
 	for {
 		if trans.IsShutdown() {
 			break
 		}
 		trans.conn.SetReadDeadline(time.Now().Add(trans.conf.IdleTimeout))
-		if readPayload(trans.conn, header, 12, true) != nil {
+		if nfour.ReadPayload(trans.conn, header, fullHeaderLength, true) != nil {
 			trans.Shutdown()
 			break
 		}
-		l, _ := bytutil.ToInt32(header[:4])
+		l, _ := bytutil.ToInt32(header[:nfour.PayLoadLenBufLength])
 		bodyBuff := make([]byte, l, l)
-		seqId, err := bytutil.ToUint64(header[4:])
+		seqId, err := bytutil.ToUint64(header[nfour.PayLoadLenBufLength:])
 		trans.conn.SetReadDeadline(time.Now().Add(trans.conf.ReadTimeout))
-		err = readPayload(trans.conn, bodyBuff, int(l), false)
+		err = nfour.ReadPayload(trans.conn, bodyBuff, int(l), false)
 
 		f, ok := trans.cache.Load(seqId)
 		if !ok {
-			NFourLogger.InfoLn("warning: lost seqId with read result", seqId)
+			nfour.NFourLogger.InfoLn("warning: lost seqId with read result", seqId)
 			continue
 		}
 		if trans.IsShutdown() {

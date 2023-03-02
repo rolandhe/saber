@@ -7,6 +7,7 @@ package proto
 import (
 	"encoding/json"
 	"github.com/rolandhe/saber/nfour"
+	"github.com/rolandhe/saber/nfour/duplex"
 	"github.com/rolandhe/saber/nfour/rpc"
 )
 
@@ -19,11 +20,11 @@ func NewJsonRpcSrvWorking(errToRes rpc.HandleErrorFunc[JsonProtoRes]) (nfour.Wor
 }
 
 type JsonClient interface {
-	SendRequest(req *JsonProtoReq, reqTimeout *nfour.ReqTimeout) (*JsonProtoRes, error)
+	SendRequest(req *JsonProtoReq, reqTimeout *duplex.ReqTimeout) (*JsonProtoRes, error)
 	Shutdown()
 }
 
-func NewJsonRpcClient(trans *nfour.Trans) JsonClient {
+func NewJsonRpcClient(trans *duplex.Trans) JsonClient {
 	codec := &jsonClientCodec[JsonProtoReq, JsonProtoRes]{}
 	c := rpc.NewClient[JsonProtoReq, JsonProtoRes](codec, trans)
 	return c

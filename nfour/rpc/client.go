@@ -5,15 +5,15 @@
 package rpc
 
 import (
-	"github.com/rolandhe/saber/nfour"
+	"github.com/rolandhe/saber/nfour/duplex"
 )
 
 type Client[REQ any, RES any] struct {
 	codec ClientCodec[REQ, RES]
-	trans *nfour.Trans
+	trans *duplex.Trans
 }
 
-func NewClient[REQ any, RES any](codec ClientCodec[REQ, RES], cli *nfour.Trans) *Client[REQ, RES] {
+func NewClient[REQ any, RES any](codec ClientCodec[REQ, RES], cli *duplex.Trans) *Client[REQ, RES] {
 	return &Client[REQ, RES]{
 		codec: codec,
 		trans: cli,
@@ -25,7 +25,7 @@ type ClientCodec[REQ any, RES any] interface {
 	Encode(req *REQ) ([]byte, error)
 }
 
-func (c *Client[REQ, RES]) SendRequest(req *REQ, reqTimeout *nfour.ReqTimeout) (*RES, error) {
+func (c *Client[REQ, RES]) SendRequest(req *REQ, reqTimeout *duplex.ReqTimeout) (*RES, error) {
 	payload, err := c.codec.Encode(req)
 	if err != nil {
 		return nil, err

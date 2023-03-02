@@ -6,7 +6,6 @@
 package gocc
 
 import (
-	"log"
 	"time"
 )
 
@@ -38,7 +37,7 @@ func dispatch(q BlockingQueue[*ExecTask], concurrentLimit Semaphore) {
 	for {
 		elem, ok := q.PullTimeout(waitTimeout)
 		if !ok {
-			log.Println("empty q, try to poll")
+			CcLogger.InfoLn("empty q, try to poll")
 			continue
 		}
 		execTask := *(elem.v)
@@ -52,7 +51,7 @@ func dispatch(q BlockingQueue[*ExecTask], concurrentLimit Semaphore) {
 					skip = true
 					break
 				}
-				log.Println("met concurrent limit, wait timeout , and next...")
+				CcLogger.InfoLn("met concurrent limit, wait timeout , and next...")
 				continue
 			}
 			break
@@ -61,7 +60,7 @@ func dispatch(q BlockingQueue[*ExecTask], concurrentLimit Semaphore) {
 			continue
 		}
 
-		log.Println("go to run task..")
+		CcLogger.InfoLn("go to run task..")
 		go runTask(execTask.task, execTask.future, concurrentLimit)
 	}
 }

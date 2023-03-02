@@ -37,6 +37,8 @@ func JavaStringLen(s string) (int, error) {
 	return l, err
 }
 
+// JavaSubStringToEnd 从start开始到string结尾的子串
+// 包含start
 func JavaSubStringToEnd(s string, start int) (string, error) {
 	return JavaSubString(s, start, -1)
 }
@@ -57,11 +59,11 @@ func JavaSubString(s string, start int, end int) (string, error) {
 	if start == end {
 		return "", nil
 	}
-	if isLowSurrogate(content[start]) {
+	if IsLowSurrogate(content[start]) {
 		return "", errors.New("start pos is invalid character")
 	}
 
-	if isHighSurrogate(content[end-1]) {
+	if IsHighSurrogate(content[end-1]) {
 		return "", errors.New("end pos is invalid character")
 	}
 
@@ -112,8 +114,20 @@ func JavaCodePoint(a []Char) rune {
 	return JavaCodePointAt(a, 0)
 }
 
-func JavaToCodePoint(high Char, low Char) rune {
+// ToJavaCodePoint 组装两个char为codepoint
+// IsHighSurrogate(high)必须为true 且 IsLowSurrogate(low)必须为true
+func ToJavaCodePoint(high Char, low Char) rune {
 	return rune(high)<<10 + rune(low) + MinSupplementaryCodePoint - MinHighSurrogate<<10 - MinLowSurrogate
+}
+
+func IsHighSurrogate(ch Char) bool {
+	cv := rune(ch)
+	return cv >= MinHighSurrogate && cv < (MaxHighSurrogate+1)
+}
+
+func IsLowSurrogate(ch Char) bool {
+	cv := rune(ch)
+	return cv >= MinLowSurrogate && cv < (MaxLowSurrogate+1)
 }
 
 func isBmpCodePoint(cp rune) bool {
@@ -138,23 +152,13 @@ func toSurrogates(cp rune, dst []Char, index int) {
 	dst[index] = highSurrogate(cp)
 }
 
-func isHighSurrogate(ch Char) bool {
-	cv := rune(ch)
-	return cv >= MinHighSurrogate && cv < (MaxHighSurrogate+1)
-}
-
-func isLowSurrogate(ch Char) bool {
-	cv := rune(ch)
-	return cv >= MinLowSurrogate && cv < (MaxLowSurrogate+1)
-}
-
 func codePointAtImpl(a []Char, index int, limit int) rune {
 	c1 := a[index]
-	if isHighSurrogate(c1) && index+1 < limit {
+	if IsHighSurrogate(c1) && index+1 < limit {
 		index++
 		c2 := a[index]
-		if isLowSurrogate(c2) {
-			return JavaToCodePoint(c1, c2)
+		if IsLowSurrogate(c2) {
+			return ToJavaCodePoint(c1, c2)
 		}
 	}
 	return rune(c1)

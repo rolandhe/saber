@@ -12,18 +12,28 @@ import (
 
 // unstable, 推荐使用NewDefaultSemaphore
 
-const sleepFixTime = time.Millisecond * 1
+const DefaultSleepFixTime = time.Millisecond * 1
 
 func NewAtomicSemaphore(limit uint) Semaphore {
 	return &semaphoreAtomic{
-		limit:   int32(limit),
-		counter: 0,
+		limit:           int32(limit),
+		counter:         0,
+		fixWaitInterval: DefaultSleepFixTime,
+	}
+}
+
+func NewAtomicSemaWithWaitInterval(limit uint, waitInterval time.Duration) Semaphore {
+	return &semaphoreAtomic{
+		limit:           int32(limit),
+		counter:         0,
+		fixWaitInterval: waitInterval,
 	}
 }
 
 type semaphoreAtomic struct {
-	limit   int32
-	counter int32
+	limit           int32
+	counter         int32
+	fixWaitInterval time.Duration
 }
 
 func (s *semaphoreAtomic) TryAcquire() bool {
@@ -53,8 +63,8 @@ func (s *semaphoreAtomic) AcquireTimeout(d time.Duration) bool {
 		if rest == 0 {
 			break
 		}
-		nextSleep := sleepFixTime
-		if rest <= sleepFixTime {
+		nextSleep := s.fixWaitInterval
+		if rest <= s.fixWaitInterval {
 			nextSleep = rest
 		}
 		rest -= nextSleep
@@ -70,7 +80,7 @@ func (s *semaphoreAtomic) Acquire() {
 			return
 		}
 		atomic.AddInt32(&s.counter, -1)
-		time.Sleep(sleepFixTime)
+		time.Sleep(s.fixWaitInterval)
 	}
 }
 

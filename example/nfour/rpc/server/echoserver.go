@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/rolandhe/saber/example/nfour/rpc/server/handler"
 	"github.com/rolandhe/saber/nfour"
+	"github.com/rolandhe/saber/nfour/duplex"
 	"github.com/rolandhe/saber/nfour/rpc/proto"
 )
 
@@ -12,5 +13,5 @@ func main() {
 	handler.RegisterAll(router)
 	conf := nfour.NewSrvConf(working, handler.TransErrHandler, 8000)
 
-	nfour.Startup(11011, conf)
+	duplex.Startup(11011, conf)
 }

@@ -1,6 +1,9 @@
 package main
 
-import "github.com/rolandhe/saber/nfour"
+import (
+	"github.com/rolandhe/saber/nfour"
+	"github.com/rolandhe/saber/nfour/duplex"
+)
 
 func main() {
 	conf := nfour.NewSrvConf(func(task *nfour.Task) ([]byte, error) {
@@ -9,5 +12,5 @@ func main() {
 		return []byte(err.Error())
 	}, 1000)
 
-	nfour.Startup(11011, conf)
+	duplex.Startup(11011, conf)
 }
