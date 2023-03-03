@@ -5,7 +5,11 @@
 
 package logger
 
-import "log"
+import (
+	"github.com/rolandhe/saber/utils"
+	"log"
+	"strconv"
+)
 
 const (
 	DebugLevel = iota
@@ -88,12 +92,16 @@ func (logger *defaultLogger) IsEnableError() bool {
 }
 
 func logOutput(prefix string, format string, v ...any) {
-	log.Printf(prefix+" "+format, v...)
+	gid, _ := utils.GetGoRoutineId()
+	gidSec := " gid=" + strconv.FormatUint(gid, 10)
+	log.Printf(prefix+gidSec+" "+format, v...)
 }
 
 func logOutputLn(prefix string, v ...any) {
 	merge := make([]any, 0, len(v)+1)
-	merge = append(merge, prefix+" ")
+	gid, _ := utils.GetGoRoutineId()
+	gidSec := " gid=" + strconv.FormatUint(gid, 10)
+	merge = append(merge, prefix+gidSec+" ")
 	merge = append(merge, v...)
 	log.Println(merge...)
 }

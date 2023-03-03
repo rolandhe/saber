@@ -157,13 +157,13 @@ func asyncSender(trans *Trans) {
 func asyncReader(trans *Trans) {
 	fullHeaderLength := nfour.PayLoadLenBufLength + seqIdHeaderLength
 	header := make([]byte, fullHeaderLength)
-
 	for {
 		if trans.IsShutdown() {
 			break
 		}
 		trans.conn.SetReadDeadline(time.Now().Add(trans.conf.IdleTimeout))
-		if nfour.ReadPayload(trans.conn, header, fullHeaderLength, true) != nil {
+		if err := nfour.ReadPayload(trans.conn, header, fullHeaderLength, true); err != nil {
+			nfour.NFourLogger.InfoLn("read header error", err)
 			trans.Shutdown()
 			break
 		}
@@ -172,7 +172,11 @@ func asyncReader(trans *Trans) {
 		seqId, err := bytutil.ToUint64(header[nfour.PayLoadLenBufLength:])
 		trans.conn.SetReadDeadline(time.Now().Add(trans.conf.ReadTimeout))
 		err = nfour.ReadPayload(trans.conn, bodyBuff, int(l), false)
-
+		if err != nil {
+			nfour.NFourLogger.Info("read payload error:%v,need %d bytes\n", err, l)
+			trans.Shutdown()
+			break
+		}
 		f, ok := trans.cache.Load(seqId)
 		if !ok {
 			nfour.NFourLogger.InfoLn("warning: lost seqId with read result", seqId)
@@ -185,10 +189,6 @@ func asyncReader(trans *Trans) {
 		fu := f.(*future)
 		fu.accept(bodyBuff, err)
 		trans.conf.concurrent.Release()
-		if err != nil {
-			trans.Shutdown()
-			break
-		}
 	}
 }
 
