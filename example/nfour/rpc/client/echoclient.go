@@ -13,26 +13,26 @@ import (
 )
 
 func main() {
-	//wait := &sync.WaitGroup{}
-	//wait.Add(2)
-	//start := time.Now().UnixNano()
-	//go func() {
-	//	log.Println("this is a start")
-	//	core()
-	//	wait.Done()
-	//	log.Println("this is a")
-	//}()
-	//go func() {
-	//	log.Println("this is b start")
-	//	core()
-	//	wait.Done()
-	//	log.Println("this is b")
-	//}()
-	//
-	//wait.Wait()
-	//fmt.Println("xxxx---", time.Now().UnixNano()-start)
+	wait := &sync.WaitGroup{}
+	wait.Add(2)
+	start := time.Now().UnixNano()
+	go func() {
+		log.Println("this is a start")
+		core()
+		wait.Done()
+		log.Println("this is a")
+	}()
+	go func() {
+		log.Println("this is b start")
+		core()
+		wait.Done()
+		log.Println("this is b")
+	}()
 
-	core()
+	wait.Wait()
+	fmt.Println("xxxx---", time.Now().UnixNano()-start)
+
+	//core()
 }
 
 func core() {
@@ -145,7 +145,7 @@ func convertBatchResult(res []string) []*req {
 func buildRequests(num int) []*proto.JsonProtoReq {
 	var ret []*proto.JsonProtoReq
 	for i := 0; i < num; i++ {
-		v := "hello world-" + strconv.Itoa(i)
+		v := "hello worldjjjjjjjjjjjjjjkadsjfkdjlasfjkldklsafjkdsafjkldsajlfjkdsajkfdjksafjkldjkslafjkldsajkfjkldsajkfjkdlsajkfdjkasfjkdsajkfjkldsajklfdjksafjkdjkasfjkdasjkfjkldsajkfjkdlasjfkfdasjkfjdklasfjkdsaf ok-" + strconv.Itoa(i)
 		ret = append(ret, &proto.JsonProtoReq{"rpc.test", []byte(v)})
 	}
 	return ret

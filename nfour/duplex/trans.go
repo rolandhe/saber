@@ -130,6 +130,7 @@ func asyncSender(trans *Trans) {
 		select {
 		case task := <-trans.sendCh:
 			if !writeCore(task.payload, task.seqId, trans.conn, task.timeout) {
+				nfour.NFourLogger.InfoLn("write err,will shutdown")
 				trans.Shutdown()
 				releaseWait = true
 				break

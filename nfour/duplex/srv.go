@@ -48,6 +48,7 @@ func readConn(conn net.Conn, writeCh chan *result, closeCh chan struct{}, conf *
 		conn.SetReadDeadline(time.Now().Add(conf.IdleTimeout))
 		err := nfour.ReadPayload(conn, header, fullHeaderLength, true)
 		if err != nil {
+			nfour.NFourLogger.InfoLn("read header error")
 			close(closeCh)
 			close(writeCh)
 			break
@@ -59,6 +60,7 @@ func readConn(conn net.Conn, writeCh chan *result, closeCh chan struct{}, conf *
 		if err != nil {
 			close(closeCh)
 			close(writeCh)
+			nfour.NFourLogger.Info("read payload error,need %d bytes\n", l)
 			break
 		}
 		seqId, _ := bytutil.ToUint64(header[nfour.PayLoadLenBufLength:])
