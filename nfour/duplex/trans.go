@@ -42,7 +42,7 @@ func NewTransConf(rwTimeout time.Duration, concurrent uint) *TransConf {
 	}
 }
 
-func NewTrans(addr string, conf *TransConf) (*Trans, error) {
+func NewTrans(addr string, conf *TransConf, name string) (*Trans, error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		// handle error
@@ -55,6 +55,7 @@ func NewTrans(addr string, conf *TransConf) (*Trans, error) {
 		conf:     conf,
 		sendCh:   make(chan *sendingTask, conf.concurrent.TotalTokens()),
 		shutDown: make(chan struct{}),
+		name:     name,
 	}
 
 	go asyncSender(t)
@@ -71,10 +72,12 @@ type Trans struct {
 	status   int32
 	cache    sync.Map
 	idGen    atomic.Uint64
+	name     string
 }
 
-func (t *Trans) Shutdown() {
+func (t *Trans) Shutdown(source string) {
 	if atomic.CompareAndSwapInt32(&t.status, 0, 1) {
+		nfour.NFourLogger.Info("%s trigger %s shutdown\n", source, t.name)
 		close(t.shutDown)
 	}
 }
@@ -112,6 +115,7 @@ func (t *Trans) SendPayload(req []byte, reqTimeout *ReqTimeout) ([]byte, error) 
 		seqId:   seqId,
 		payload: req,
 		timeout: reqTimeout.WriteTimeout,
+		f:       fu,
 	}
 	return fu.Get(reqTimeout.ReadTimeout)
 }
@@ -122,35 +126,41 @@ func (t *Trans) SendPayload(req []byte, reqTimeout *ReqTimeout) ([]byte, error) 
 func asyncSender(trans *Trans) {
 	releaseWait := false
 	for {
-		if trans.IsShutdown() {
-			trans.conn.Close()
-			releaseWait = true
-			break
-		}
 		select {
 		case task := <-trans.sendCh:
 			if !writeCore(task.payload, task.seqId, trans.conn, task.timeout) {
-				nfour.NFourLogger.InfoLn("write err,will shutdown")
-				trans.Shutdown()
+				nfour.NFourLogger.Info("%s write err,will shutdown\n", trans.name)
+				trans.Shutdown("sender")
 				releaseWait = true
 				break
 			}
-			nfour.NFourLogger.Debug("send success\n")
+			nfour.NFourLogger.Debug("%s send success\n", trans.name)
 		case <-trans.shutDown:
 			trans.conn.Close()
 			releaseWait = true
-			nfour.NFourLogger.InfoLn("shut down")
+			nfour.NFourLogger.Info("%s get shut down event,shut down\n", trans.name)
 			break
 		case <-time.After(trans.conf.IdleTimeout):
-			nfour.NFourLogger.InfoLn("wait send task timeout")
+			nfour.NFourLogger.Info("%s wait send task timeout\n", trans.name)
+		}
+		if releaseWait {
+			break
 		}
 	}
 	if releaseWait {
-		trans.cache.Range(func(key, value any) bool {
-			fu := value.(*future)
-			fu.accept(nil, TaskTimeout)
-			return true
-		})
+		nfour.NFourLogger.Info("%s send release not sent task\n", trans.name)
+		releaseCount := 0
+		for {
+			select {
+			case task := <-trans.sendCh:
+				task.f.accept(nil, TransShutdown)
+				releaseCount++
+			default:
+				nfour.NFourLogger.Info("%s send release not sent task:%d\n", trans.name, releaseCount)
+				return
+			}
+		}
+
 	}
 }
 
@@ -163,8 +173,8 @@ func asyncReader(trans *Trans) {
 		}
 		trans.conn.SetReadDeadline(time.Now().Add(trans.conf.IdleTimeout))
 		if err := nfour.ReadPayload(trans.conn, header, fullHeaderLength, true); err != nil {
-			nfour.NFourLogger.InfoLn("read header error", err)
-			trans.Shutdown()
+			nfour.NFourLogger.Info("%s read header error:%v\n", trans.name, err)
+			trans.Shutdown("reader")
 			break
 		}
 		l, _ := bytutil.ToInt32(header[:nfour.PayLoadLenBufLength])
@@ -173,13 +183,13 @@ func asyncReader(trans *Trans) {
 		trans.conn.SetReadDeadline(time.Now().Add(trans.conf.ReadTimeout))
 		err = nfour.ReadPayload(trans.conn, bodyBuff, int(l), false)
 		if err != nil {
-			nfour.NFourLogger.Info("read payload error:%v,need %d bytes\n", err, l)
-			trans.Shutdown()
+			nfour.NFourLogger.Info("%s read payload error:%v,need %d bytes\n", trans.name, err, l)
+			trans.Shutdown("reader")
 			break
 		}
 		f, ok := trans.cache.Load(seqId)
 		if !ok {
-			nfour.NFourLogger.InfoLn("warning: lost seqId with read result", seqId)
+			nfour.NFourLogger.Info("warning: %s lost seqId:%d with read result\n", trans.name, seqId)
 			continue
 		}
 		if trans.IsShutdown() {
@@ -190,12 +200,23 @@ func asyncReader(trans *Trans) {
 		fu.accept(bodyBuff, err)
 		trans.conf.concurrent.Release()
 	}
+	nfour.NFourLogger.Info("%s async reader release futures\n", trans.name)
+	releasedCount := 0
+
+	trans.cache.Range(func(key, value any) bool {
+		fu := value.(*future)
+		fu.accept(nil, TransShutdown)
+		releasedCount++
+		return true
+	})
+	nfour.NFourLogger.Info("%s async reader release futures:%d\n", trans.name, releasedCount)
 }
 
 type sendingTask struct {
 	seqId   uint64
 	payload []byte
 	timeout time.Duration
+	f       *future
 }
 
 type future struct {

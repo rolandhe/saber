@@ -73,7 +73,7 @@ func ReadPayload(conn net.Conn, buff []byte, expectLen int, notHalt bool) error 
 		n, err := conn.Read(buff)
 		if err != nil {
 			if !notHalt && errors.Is(err, os.ErrDeadlineExceeded) {
-				NFourLogger.InfoLn(err)
+				NFourLogger.InfoLn(err, l)
 				return err
 			}
 			if errors.Is(err, io.EOF) {
@@ -83,9 +83,11 @@ func ReadPayload(conn net.Conn, buff []byte, expectLen int, notHalt bool) error 
 			return err
 		}
 		l += n
+
 		if l == expectLen {
 			break
 		}
+		buff = buff[n:]
 	}
 	return nil
 }

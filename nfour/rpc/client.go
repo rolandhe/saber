@@ -41,6 +41,6 @@ func (c *Client[REQ, RES]) SendRequest(req *REQ, reqTimeout *duplex.ReqTimeout) 
 	return res, nil
 }
 
-func (c *Client[REQ, RES]) Shutdown() {
-	c.trans.Shutdown()
+func (c *Client[REQ, RES]) Shutdown(source string) {
+	c.trans.Shutdown(source)
 }

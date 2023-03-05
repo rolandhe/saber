@@ -21,7 +21,7 @@ func NewJsonRpcSrvWorking(errToRes rpc.HandleErrorFunc[JsonProtoRes]) (nfour.Wor
 
 type JsonClient interface {
 	SendRequest(req *JsonProtoReq, reqTimeout *duplex.ReqTimeout) (*JsonProtoRes, error)
-	Shutdown()
+	Shutdown(source string)
 }
 
 func NewJsonRpcClient(trans *duplex.Trans) JsonClient {
@@ -107,8 +107,8 @@ func FactoryStringTypeHandleBiz(handle JsonStringTypeHandleBiz) rpc.HandleBiz[Js
 	}
 }
 
-func ParseJsonProtoRes[T any](res *JsonProtoRes) (*T, error) {
-	tIns := new(T)
+func ParseJsonProtoRes[T any](res *JsonProtoRes, factory func() *T) (*T, error) {
+	tIns := factory()
 	if err := json.Unmarshal(res.Body, tIns); err != nil {
 		return nil, err
 	} else {

@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/rolandhe/saber/example/nfour/rpc/server/handler"
+	"github.com/rolandhe/saber/nfour"
 	"github.com/rolandhe/saber/nfour/duplex"
 	"github.com/rolandhe/saber/nfour/rpc/proto"
 	"github.com/rolandhe/saber/utils/sortutil"
@@ -17,27 +19,27 @@ func main() {
 	wait.Add(2)
 	start := time.Now().UnixNano()
 	go func() {
-		log.Println("this is a start")
-		core()
+		nfour.NFourLogger.InfoLn("this is a start")
+		core("a")
 		wait.Done()
-		log.Println("this is a")
+		nfour.NFourLogger.InfoLn("this is a end")
 	}()
 	go func() {
-		log.Println("this is b start")
-		core()
+		nfour.NFourLogger.InfoLn("this is b start")
+		core("b")
 		wait.Done()
-		log.Println("this is b")
+		nfour.NFourLogger.InfoLn("this is b end")
 	}()
 
 	wait.Wait()
-	fmt.Println("xxxx---", time.Now().UnixNano()-start)
+	nfour.NFourLogger.InfoLn("xxxx---", time.Now().UnixNano()-start)
 
-	//core()
+	//core("single")
 }
 
-func core() {
+func core(name string) {
 	conf := duplex.NewTransConf(time.Second*2, 5000)
-	t, err := duplex.NewTrans("localhost:11011", conf)
+	t, err := duplex.NewTrans("localhost:11011", conf, name)
 	if err != nil {
 		log.Println(err)
 		return
@@ -47,7 +49,7 @@ func core() {
 
 	concurrentSend(50000, client)
 
-	client.Shutdown()
+	client.Shutdown(name + "-main")
 
 }
 
@@ -80,7 +82,7 @@ func concurrentSend(taskCount int, c proto.JsonClient) {
 			for {
 				resp, err := c.SendRequest(r, reqTimeout)
 				if err != nil {
-					s = "err:" + err.Error() + "###" + err.Error()
+					s = "err:" + "###" + err.Error()
 					if tryCount < 2 {
 						time.Sleep(time.Millisecond * 10)
 						tryCount++
@@ -88,7 +90,14 @@ func concurrentSend(taskCount int, c proto.JsonClient) {
 						break
 					}
 				} else {
-					s = string(resp.Body)
+					jsonResult, _ := proto.ParseJsonProtoRes[handler.Result[string]](resp, func() *handler.Result[string] {
+						return &handler.Result[string]{}
+					})
+					if jsonResult.Code == 500 {
+						s = "err:" + "###" + jsonResult.Message
+					} else {
+						s = jsonResult.Data
+					}
 					break
 				}
 			}
@@ -106,13 +115,14 @@ func concurrentSend(taskCount int, c proto.JsonClient) {
 
 	cost := time.Now().UnixNano() - start
 
-	fmt.Println("--------------------------------")
+	nfour.NFourLogger.InfoLn("--------------------------------")
 	nArrays := convertBatchResult(rarray)
 	errCount := 0
 	last := -1
 	lostCount := 0
 	for _, v := range nArrays {
 		if strings.HasPrefix(v.val, "err:") {
+			nfour.NFourLogger.InfoLn(v.val)
 			errCount++
 		} else {
 			//fmt.Println(v.val)
@@ -122,8 +132,8 @@ func concurrentSend(taskCount int, c proto.JsonClient) {
 			last = v.sortId
 		}
 	}
-	log.Printf("......end(%d)..error(%d)..lost(%d)..\n", len(rarray), errCount, lostCount)
-	log.Println(cost, "nano")
+	nfour.NFourLogger.Info("......end(%d)..error(%d)..lost(%d)..\n", len(rarray), errCount, lostCount)
+	nfour.NFourLogger.InfoLn(cost, "nano")
 }
 
 func convertBatchResult(res []string) []*req {
@@ -131,7 +141,7 @@ func convertBatchResult(res []string) []*req {
 	for _, s := range res {
 		pos := strings.LastIndex(s, "-")
 		ids := s[pos+1:]
-		id, _ := strconv.Atoi(ids)
+		id, _ := strconv.Atoi(strings.TrimLeft(ids, "0"))
 		array = append(array, &req{s, id})
 	}
 
@@ -145,7 +155,8 @@ func convertBatchResult(res []string) []*req {
 func buildRequests(num int) []*proto.JsonProtoReq {
 	var ret []*proto.JsonProtoReq
 	for i := 0; i < num; i++ {
-		v := "hello worldjjjjjjjjjjjjjjkadsjfkdjlasfjkldklsafjkdsafjkldsajlfjkdsajkfdjksafjkldjkslafjkldsajkfjkldsajkfjkdlsajkfdjkasfjkdsajkfjkldsajklfdjksafjkdjkasfjkdasjkfjkldsajkfjkdlasjfkfdasjkfjdklasfjkdsaf ok-" + strconv.Itoa(i)
+		num := fmt.Sprintf("%08d", i)
+		v := "hello worldjjjjjjjjjjjjjjkadsjfkdjlasfjkldklsafjkdsafjkldsajlfjkdsajkfdjksafjkldjkslafjkldsajkfjkldsajkfjkdlsajkfdjkasfjkdsajkfjkldsajklfdjksafjkdjkasfjkdasjkfjkldsajkfjkdlasjfkfdasjkfjdklasfjkdsaf ok-" + num
 		ret = append(ret, &proto.JsonProtoReq{"rpc.test", []byte(v)})
 	}
 	return ret

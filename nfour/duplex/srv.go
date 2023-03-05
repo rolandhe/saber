@@ -91,7 +91,7 @@ func writeConn(conn net.Conn, writeCh chan *result, closeCh chan struct{}, conf 
 			if !writeCloseConn {
 				conn.Close()
 			}
-			break
+			return
 		}
 		select {
 		case res := <-writeCh:
@@ -107,7 +107,7 @@ func writeConn(conn net.Conn, writeCh chan *result, closeCh chan struct{}, conf 
 			if !writeCloseConn {
 				conn.Close()
 			}
-			break
+			return
 		}
 	}
 }
@@ -118,18 +118,28 @@ func writeCore(res []byte, seqId uint64, conn net.Conn, timeout time.Duration) b
 	fullHeaderLength := nfour.PayLoadLenBufLength + seqIdHeaderLength
 
 	plen := len(res)
-	payload := make([]byte, plen+fullHeaderLength)
+	allSize := plen + fullHeaderLength
+	payload := make([]byte, allSize)
 	copy(payload, bytutil.Int32ToBytes(int32(plen)))
 	copy(payload[nfour.PayLoadLenBufLength:], bytutil.Uint64ToBytes(seqId))
 	copy(payload[fullHeaderLength:], res)
 
-	n, err := conn.Write(payload)
-	if err != nil {
-		conn.Close()
-		nfour.NFourLogger.InfoLn(err)
-		return false
+	l := 0
+	for {
+		n, err := conn.Write(payload)
+		if err != nil {
+			conn.Close()
+			nfour.NFourLogger.InfoLn(err, "write core failed")
+			return false
+		}
+		l += n
+		if l == allSize {
+			break
+		}
+		payload = payload[l:]
 	}
-	nfour.NFourLogger.Debug("write data:%d, expect:%d\n", n, plen+fullHeaderLength)
+
+	nfour.NFourLogger.Debug("write data:%d, expect:%d\n", l, allSize)
 	return true
 }
 
