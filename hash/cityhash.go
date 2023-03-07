@@ -1,3 +1,6 @@
+// Package hash, Golang concurrent tools like java juc.
+//
+// Copyright 2023 The saber Authors. All rights reserved.
 package hash
 
 import (
@@ -6,6 +9,10 @@ import (
 	"unsafe"
 )
 
+// 移植c++版本的cityhash算法, 由于没有找到对_mm_crc32_u64的支持,所以不支持CityHashCrc256, 后续找到办法后会继续支持
+
+
+// 判断当前系统的大小端属性
 var littleEndian bool
 
 const k0 uint64 = 0xc3a5c85c97cb3127
@@ -45,14 +52,13 @@ func fetch64(data []byte) uint64 {
 	v |= uint64(data[3]) << 24
 	v |= uint64(data[4]) << 32
 	v |= uint64(data[5]) << 40
-	v |= uint64(data[5]) << 40
 	v |= uint64(data[6]) << 48
 	v |= uint64(data[7]) << 56
 	if littleEndian {
 		return v
 	}
 
-	return bits.Reverse64(v)
+	return bits.ReverseBytes64(v)
 }
 
 func fetch32(data []byte) uint32 {
@@ -65,7 +71,7 @@ func fetch32(data []byte) uint32 {
 		return v
 	}
 
-	return bits.Reverse32(v)
+	return bits.ReverseBytes32(v)
 }
 
 func fmix(h uint32) uint32 {
@@ -129,8 +135,9 @@ func hash32Len5to12(s []byte, len uint) uint32 {
 	return fmix(mur(c, mur(b, mur(a, d))))
 }
 
+// CityHash32 产生32位的hash
 func CityHash32(str string) uint32 {
-	s := []byte(str)
+	s := strutil.DetachBytesString(str)
 	length := uint(len(str))
 	if length <= 24 {
 		if length <= 12 {
@@ -170,10 +177,10 @@ func CityHash32(str string) uint32 {
 	f = f*5 + 0xe6546b64
 	iters := (length - 1) / 20
 	for {
-		a0 := rotate32(fetch32(s)*c1, 17) * c2
-		a1 := fetch32(s[4:])
-		a2 := rotate32(fetch32(s[8:])*c1, 17) * c2
-		a3 := rotate32(fetch32(s[12:])*c1, 17) * c2
+		a0 = rotate32(fetch32(s)*c1, 17) * c2
+		a1 = fetch32(s[4:])
+		a2 = rotate32(fetch32(s[8:])*c1, 17) * c2
+		a3 = rotate32(fetch32(s[12:])*c1, 17) * c2
 		a4 = fetch32(s[16:])
 		h ^= a0
 		h = rotate32(h, 18)
@@ -188,9 +195,9 @@ func CityHash32(str string) uint32 {
 		h = rotate32(h, 19)
 		h = h*5 + 0xe6546b64
 		g ^= a4
-		g = bits.Reverse32(g) * 5
+		g = bits.ReverseBytes32(g) * 5
 		h += a4 * 5
-		h = bits.Reverse32(h)
+		h = bits.ReverseBytes32(h)
 		f += a0
 		f, h, g = g, f, h
 		s = s[20:]
@@ -317,22 +324,23 @@ func hashLen33to64(s []byte, length uint) uint64 {
 	c := fetch64(s[length-24:])
 	d := fetch64(s[length-32:])
 	e := fetch64(s[16:]) * k2
-	f := fetch64(s[:24]) * 9
+	f := fetch64(s[24:]) * 9
 	g := fetch64(s[length-8:])
 	h := fetch64(s[length-16:]) * mul
 	u := rotate64(a+g, 43) + (rotate64(b, 30)+c)*9
 	v := ((a + g) ^ d) + f + 1
-	w := bits.Reverse64((u+v)*mul) + h
+	w := bits.ReverseBytes64((u+v)*mul) + h
 	x := rotate64(e+f, 42) + c
-	y := (bits.Reverse64((v+w)*mul) + g) * mul
+	y := (bits.ReverseBytes64((v+w)*mul) + g) * mul
 	z := e + f + c
-	a = bits.Reverse64((x+z)*mul+y) + b
+	a = bits.ReverseBytes64((x+z)*mul+y) + b
 	b = shiftMix((z+a)*mul+d+h) * mul
 	return b + x
 }
 
+// CityHash64 产生64位的hash
 func CityHash64(str string) uint64 {
-	s := []byte(str)
+	s := strutil.DetachBytesString(str)
 	length := uint(len(str))
 	if length <= 32 {
 		if length <= 16 {
@@ -376,13 +384,7 @@ func CityHash64(str string) uint64 {
 		hashLen16(v.high, w.high)+x)
 }
 
-func CityHash64WithSeed(str string, seed uint64) uint64 {
-	return cityHash64WithTwoSeeds(str, k2, seed)
-}
 
-func cityHash64WithTwoSeeds(str string, seed0 uint64, seed1 uint64) uint64 {
-	return hashLen16(CityHash64(str)-seed0, seed1)
-}
 
 // cityMurmur  A subroutine for CityHash128().  Returns a decent 128-bit hash for strings
 // of any length representable in signed long.  Based on City and Murmur.
@@ -490,6 +492,7 @@ func cityHash128WithSeedCore(s []byte, length uint, seed *Uint128) *Uint128 {
 		hashLen16(x+w.high, y+v.high))
 }
 
+//CityHash128 产生128位的hash
 func CityHash128(str string) *Uint128 {
 	length := uint(len(str))
 	if length >= 16 {
@@ -505,4 +508,12 @@ func CityHash128WithSeed(str string, seed *Uint128) *Uint128 {
 	s := strutil.DetachBytesString(str)
 	length := uint(len(str))
 	return cityHash128WithSeedCore(s, length, seed)
+}
+
+func CityHash64WithSeed(str string, seed uint64) uint64 {
+	return cityHash64WithTwoSeeds(str, k2, seed)
+}
+
+func cityHash64WithTwoSeeds(str string, seed0 uint64, seed1 uint64) uint64 {
+	return hashLen16(CityHash64(str)-seed0, seed1)
 }
