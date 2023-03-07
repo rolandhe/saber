@@ -11,7 +11,6 @@ import (
 
 // 移植c++版本的cityhash算法, 由于没有找到对_mm_crc32_u64的支持,所以不支持CityHashCrc256, 后续找到办法后会继续支持
 
-
 // 判断当前系统的大小端属性
 var littleEndian bool
 
@@ -135,10 +134,14 @@ func hash32Len5to12(s []byte, len uint) uint32 {
 	return fmix(mur(c, mur(b, mur(a, d))))
 }
 
-// CityHash32 产生32位的hash
-func CityHash32(str string) uint32 {
+func CityHash32String(str string) uint32 {
 	s := strutil.DetachBytesString(str)
 	length := uint(len(str))
+	return CityHash32(s, length)
+}
+
+// CityHash32 产生32位的hash
+func CityHash32(s []byte, length uint) uint32 {
 	if length <= 24 {
 		if length <= 12 {
 			if length <= 4 {
@@ -338,10 +341,14 @@ func hashLen33to64(s []byte, length uint) uint64 {
 	return b + x
 }
 
-// CityHash64 产生64位的hash
-func CityHash64(str string) uint64 {
+func CityHash64String(str string) uint64 {
 	s := strutil.DetachBytesString(str)
 	length := uint(len(str))
+	return CityHash64(s, length)
+}
+
+// CityHash64 产生64位的hash
+func CityHash64(s []byte, length uint) uint64 {
 	if length <= 32 {
 		if length <= 16 {
 			return hashLen0to16(s, length)
@@ -383,8 +390,6 @@ func CityHash64(str string) uint64 {
 	return hashLen16(hashLen16(v.low, w.low)+shiftMix(y)*k1+z,
 		hashLen16(v.high, w.high)+x)
 }
-
-
 
 // cityMurmur  A subroutine for CityHash128().  Returns a decent 128-bit hash for strings
 // of any length representable in signed long.  Based on City and Murmur.
@@ -492,28 +497,42 @@ func cityHash128WithSeedCore(s []byte, length uint, seed *Uint128) *Uint128 {
 		hashLen16(x+w.high, y+v.high))
 }
 
-//CityHash128 产生128位的hash
-func CityHash128(str string) *Uint128 {
+func CityHash128String(str string) *Uint128 {
+	s := strutil.DetachBytesString(str)
 	length := uint(len(str))
+	return CityHash128(s, length)
+}
+
+// CityHash128 产生128位的hash
+func CityHash128(s []byte, length uint) *Uint128 {
 	if length >= 16 {
-		s := strutil.DetachBytesString(str)
 		seed := MakeUint128(fetch64(s), fetch64(s[8:])+k0)
 
 		return cityHash128WithSeedCore(s[16:], length-16, seed)
 	}
-	return CityHash128WithSeed(str, MakeUint128(k0, k1))
+	return CityHash128WithSeed(s, length, MakeUint128(k0, k1))
 }
 
-func CityHash128WithSeed(str string, seed *Uint128) *Uint128 {
+func CityHash128WithSeedString(str string, seed *Uint128) *Uint128 {
 	s := strutil.DetachBytesString(str)
 	length := uint(len(str))
 	return cityHash128WithSeedCore(s, length, seed)
 }
 
-func CityHash64WithSeed(str string, seed uint64) uint64 {
-	return cityHash64WithTwoSeeds(str, k2, seed)
+func CityHash128WithSeed(s []byte, length uint, seed *Uint128) *Uint128 {
+	return cityHash128WithSeedCore(s, length, seed)
 }
 
-func cityHash64WithTwoSeeds(str string, seed0 uint64, seed1 uint64) uint64 {
-	return hashLen16(CityHash64(str)-seed0, seed1)
+func CityHash64WithSeedString(str string, seed uint64) uint64 {
+	s := strutil.DetachBytesString(str)
+	length := uint(len(str))
+	return CityHash64WithSeed(s, length, seed)
+}
+
+func CityHash64WithSeed(s []byte, length uint, seed uint64) uint64 {
+	return cityHash64WithTwoSeeds(s, length, k2, seed)
+}
+
+func cityHash64WithTwoSeeds(s []byte, length uint, seed0 uint64, seed1 uint64) uint64 {
+	return hashLen16(CityHash64(s, length)-seed0, seed1)
 }
