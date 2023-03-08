@@ -530,9 +530,15 @@ func CityHash64WithSeedString(str string, seed uint64) uint64 {
 }
 
 func CityHash64WithSeed(s []byte, length uint, seed uint64) uint64 {
-	return cityHash64WithTwoSeeds(s, length, k2, seed)
+	return CityHash64WithSeeds(s, length, k2, seed)
 }
 
-func cityHash64WithTwoSeeds(s []byte, length uint, seed0 uint64, seed1 uint64) uint64 {
+func CityHash64WithSeedsString(str string, seed0 uint64, seed1 uint64) uint64 {
+	s := strutil.DetachBytesString(str)
+	length := uint(len(str))
+	return CityHash64WithSeeds(s, length, seed0, seed1)
+}
+
+func CityHash64WithSeeds(s []byte, length uint, seed0 uint64, seed1 uint64) uint64 {
 	return hashLen16(CityHash64(s, length)-seed0, seed1)
 }

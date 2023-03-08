@@ -26,13 +26,7 @@ type param256 struct {
 	z uint64
 }
 
-func CityHashCrc256LongString(str string, seed uint32) ([]uint64, error) {
-	s := strutil.DetachBytesString(str)
-	length := uint(len(str))
-	return CityHashCrc256Long(s, length, seed)
-}
-
-func CityHashCrc256Long(s []byte, len uint, seed uint32) ([]uint64, error) {
+func cityHashCrc256Long(s []byte, len uint, seed uint32) ([]uint64, error) {
 	if !crc.WithSSE42() {
 		return nil, notSupportError
 	}
@@ -139,7 +133,7 @@ func CityHashCrc256String(str string) ([]uint64, error) {
 
 func CityHashCrc256(s []byte, len uint) ([]uint64, error) {
 	if len >= 240 {
-		return CityHashCrc256Long(s, len, 0)
+		return cityHashCrc256Long(s, len, 0)
 	} else {
 		return cityHashCrc256Short(s, len)
 	}
@@ -211,5 +205,5 @@ func permute3(a *uint64, b *uint64, c *uint64) {
 func cityHashCrc256Short(s []byte, len uint) ([]uint64, error) {
 	data := make([]byte, 240)
 	copy(data, s)
-	return CityHashCrc256Long(data, 240, ^uint32(len))
+	return cityHashCrc256Long(data, 240, ^uint32(len))
 }
