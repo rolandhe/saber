@@ -22,15 +22,15 @@ type param256 struct {
 	z uint64
 }
 
-func CityHashCrc256LongString(str string, seed uint32) ([]uint64,error) {
+func CityHashCrc256LongString(str string, seed uint32) ([]uint64, error) {
 	s := strutil.DetachBytesString(str)
 	length := uint(len(str))
 	return CityHashCrc256Long(s, length, seed)
 }
 
-func CityHashCrc256Long(s []byte, len uint, seed uint32) ([]uint64,error) {
+func CityHashCrc256Long(s []byte, len uint, seed uint32) ([]uint64, error) {
 	if !crc.WithSSE42() {
-		return nil,notSupportError
+		return nil, notSupportError
 	}
 	result := make([]uint64, 4)
 	var param param256
@@ -124,16 +124,16 @@ func CityHashCrc256Long(s []byte, len uint, seed uint32) ([]uint64,error) {
 	result[2] = param.a + result[1]
 	param.a = shiftMix((param.a+param.e)*k0) * k0
 	result[3] = param.a + result[2]
-	return result,nil
+	return result, nil
 }
 
-func CityHashCrc256String(str string) ([]uint64,error) {
+func CityHashCrc256String(str string) ([]uint64, error) {
 	s := strutil.DetachBytesString(str)
 	length := uint(len(str))
 	return CityHashCrc256(s, length)
 }
 
-func CityHashCrc256(s []byte, len uint) ([]uint64,error) {
+func CityHashCrc256(s []byte, len uint) ([]uint64, error) {
 	if len >= 240 {
 		return CityHashCrc256Long(s, len, 0)
 	} else {
@@ -141,41 +141,41 @@ func CityHashCrc256(s []byte, len uint) ([]uint64,error) {
 	}
 }
 
-func CityHashCrc128WithSeedString(str string, seed *Uint128) (*Uint128,error) {
+func CityHashCrc128WithSeedString(str string, seed *Uint128) (*Uint128, error) {
 	s := strutil.DetachBytesString(str)
 	length := uint(len(str))
 	return CityHashCrc128WithSeed(s, length, seed)
 }
 
-func CityHashCrc128WithSeed(s []byte, length uint, seed *Uint128) (*Uint128,error) {
+func CityHashCrc128WithSeed(s []byte, length uint, seed *Uint128) (*Uint128, error) {
 	if length <= 900 {
-		return CityHash128WithSeed(s, length, seed),nil
+		return CityHash128WithSeed(s, length, seed), nil
 	} else {
-		result,err := CityHashCrc256(s, length)
-		if err != nil{
-			return nil,err
+		result, err := CityHashCrc256(s, length)
+		if err != nil {
+			return nil, err
 		}
 		u := seed.high + result[0]
 		v := seed.low + result[1]
-		return MakeUint128(hashLen16(u, v+result[2]), hashLen16(rotate64(v, 32), u*k0+result[3])),nil
+		return MakeUint128(hashLen16(u, v+result[2]), hashLen16(rotate64(v, 32), u*k0+result[3])), nil
 	}
 }
 
-func CityHashCrc128String(str string) (*Uint128,error) {
+func CityHashCrc128String(str string) (*Uint128, error) {
 	s := strutil.DetachBytesString(str)
 	length := uint(len(str))
 	return CityHashCrc128(s, length)
 }
 
-func CityHashCrc128(s []byte, length uint) (*Uint128,error) {
+func CityHashCrc128(s []byte, length uint) (*Uint128, error) {
 	if length <= 900 {
-		return CityHash128(s, length),nil
+		return CityHash128(s, length), nil
 	} else {
-		result,err := CityHashCrc256(s, length)
+		result, err := CityHashCrc256(s, length)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
-		return MakeUint128(result[2], result[3]),nil
+		return MakeUint128(result[2], result[3]), nil
 	}
 }
 
@@ -204,8 +204,8 @@ func permute3(a *uint64, b *uint64, c *uint64) {
 	*a, *b, *c = *c, *a, *b
 }
 
-func cityHashCrc256Short(s []byte, len uint) ([]uint64,error) {
+func cityHashCrc256Short(s []byte, len uint) ([]uint64, error) {
 	data := make([]byte, 240)
 	copy(data, s)
-	return CityHashCrc256Long(data, 240, uint32(len))
+	return CityHashCrc256Long(data, 240, ^uint32(len))
 }
