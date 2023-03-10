@@ -1,6 +1,7 @@
 package crc
 
 import (
+	"runtime"
 	"unsafe"
 )
 
@@ -25,6 +26,9 @@ func init() {
 }
 
 func _withSSE42() bool {
+	if runtime.GOARCH != "amd64"{
+		return false
+	}
 	_, _, ecx1, _ := cpuid(1, 0)
 	return ecx1&cpuid_SSE42 != 0
 }
