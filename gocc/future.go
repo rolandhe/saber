@@ -14,6 +14,9 @@ var (
 	TaskCancelledError = errors.New("future task is cancelled")
 )
 
+// NewFutureGroup 构建一个Future组，每组内的Future数量需要事先知道。
+//
+//	count 组内Future的数量
 func NewFutureGroup(count uint64) *FutureGroup {
 	return &FutureGroup{
 		notifier: NewCountdownLatch(int64(count)),

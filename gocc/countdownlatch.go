@@ -8,6 +8,9 @@ import (
 	"time"
 )
 
+// NewCountdownLatch 构建总量为count的倒计数，相比于WaitGroup, CountdownLatch提供的能力更丰富
+//
+//	count  数据总量
 func NewCountdownLatch(count int64) *CountdownLatch {
 	if count < 0 {
 		panic("invalid tokenCount value")

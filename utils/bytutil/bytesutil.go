@@ -21,11 +21,13 @@ func ToInt32(buf []byte) (int32, error) {
 	return ret, nil
 }
 
+// ToUint32 转换4个字节为uint32
 func ToUint32(buf []byte) (uint32, error) {
 	ret, err := ToInt32(buf)
 	return uint32(ret), err
 }
 
+// ToInt64 转换8个字节为int64
 func ToInt64(buf []byte) (int64, error) {
 	if len(buf) < 8 {
 		return 0, errors.New("int32 need at least 8 bytes")
@@ -42,16 +44,18 @@ func ToInt64(buf []byte) (int64, error) {
 	return ret, nil
 }
 
-// ToUint64 转换8个字节为unit64
+// ToUint64 转换8个字节为uit64
 func ToUint64(buf []byte) (uint64, error) {
 	ret, err := ToInt64(buf)
 	return uint64(ret), err
 }
 
+// Int32ToBytes int32 类型值转换为小端的4个字节
 func Int32ToBytes(v int32) []byte {
 	return Uint32ToBytes(uint32(v))
 }
 
+// Uint32ToBytes uint32 类型值转换为小端的4个字节
 func Uint32ToBytes(uv uint32) []byte {
 	buf := make([]byte, 4, 4)
 	buf[0] = byte(uv & mask)
@@ -61,10 +65,12 @@ func Uint32ToBytes(uv uint32) []byte {
 	return buf
 }
 
+// Int64ToBytes int64类型值转换为小端8个字节
 func Int64ToBytes(v int64) []byte {
 	return Uint64ToBytes(uint64(v))
 }
 
+// Uint64ToBytes 转换uint64 类型值为小端 8个字节
 func Uint64ToBytes(uv uint64) []byte {
 	buf := make([]byte, 8)
 

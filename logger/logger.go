@@ -29,10 +29,12 @@ type Logger interface {
 	ErrorLn(v ...any)
 }
 
+// NewDefaultLogger 构建Info级别的缺省日志输出实例
 func NewDefaultLogger() Logger {
 	return NewLoggerWithLevel(InfoLevel)
 }
 
+// NewLoggerWithLevel  指定日志级别并生成对应的缺省日志输出实例
 func NewLoggerWithLevel(logLevel int) Logger {
 	return &defaultLogger{
 		logLevel,

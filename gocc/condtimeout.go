@@ -21,6 +21,7 @@ type Condition interface {
 	Signal()
 }
 
+// NewCondTimeout 构建支持timeout的cond
 func NewCondTimeout(l sync.Locker) Condition {
 	c := &condTimeout{locker: l}
 	n := make(chan struct{})

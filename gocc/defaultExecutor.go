@@ -9,6 +9,9 @@ import (
 	"time"
 )
 
+// NewDefaultExecutor 构建指定并发任务量的任务执行器
+//
+//	concurLevel  可以并发执行的任务总量
 func NewDefaultExecutor(concurLevel uint) Executor {
 	return &chanExecutor{
 		concurLevel:     concurLevel,
@@ -16,6 +19,7 @@ func NewDefaultExecutor(concurLevel uint) Executor {
 	}
 }
 
+// Task 需要执行的任务主体，它是包含任务业务逻辑的函数
 type Task func() (any, error)
 
 // Executor 多任务执行器

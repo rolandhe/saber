@@ -11,6 +11,9 @@ import (
 
 const defaultLimit = 128
 
+// NewDefaultBlockingQueue 构建一个有界队列，缺省的队列底层使用channel
+//
+//	limit 队列容量
 func NewDefaultBlockingQueue[T any](limit int64) BlockingQueue[T] {
 	if limit < 0 {
 		limit = defaultLimit
@@ -20,10 +23,12 @@ func NewDefaultBlockingQueue[T any](limit int64) BlockingQueue[T] {
 	}
 }
 
+// Elem 进入队列的元素使用Elem来封装
 type Elem[T any] struct {
 	v *T
 }
 
+// GetValue 获取Elem内封装的数据
 func (el *Elem[T]) GetValue() T {
 	return *(el.v)
 }

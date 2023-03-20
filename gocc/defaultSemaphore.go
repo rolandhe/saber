@@ -5,6 +5,9 @@ package gocc
 
 import "time"
 
+// NewDefaultSemaphore 构建指定总量的信号量
+//
+//	limit  信号量的总量
 func NewDefaultSemaphore(limit uint) Semaphore {
 	return &semaphoreChan{
 		make(chan struct{}, limit),
