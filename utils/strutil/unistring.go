@@ -3,6 +3,13 @@
 // Copyright 2023 The saber Authors. All rights reserved.
 //
 
+// Package strutil string工具集合，提供：
+//
+//  1. 获取string 中unicode 字符的个数
+//
+//  2. 快速从string中获取其 []byte, 之所以快，是避免了内存分配和复制
+//
+//  3. 快速把 []byte 转换成 string，之所以快，是避免了内存分配和复制
 package strutil
 
 import (

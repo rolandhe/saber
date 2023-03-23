@@ -24,14 +24,20 @@ type Task func() (any, error)
 
 // Executor 多任务执行器
 type Executor interface {
+
 	// Execute 执行任务,如果执行器内资源已耗尽,则直接返回nil,false,否则返回future和true
 	Execute(task Task) (*Future, bool)
+
 	// ExecuteTimeout 执行任务,支持超时,如果执行器内资源已耗尽且在超时时间内依然不能获取到资源,则返回nil,false,如果执行器内有资源或者超时时间内能获取资源,返回future,true
 	ExecuteTimeout(task Task, timeout time.Duration) (*Future, bool)
+
 	// ExecuteInGroup 与Execute类似,只是返回的future会被加到FutureGroup中, 可以使用FutureGroup来管理批量的任务:
-	// 1. 主线程在FutureGroup上等待多个任务完成,没有必要自己循环扫描多个Future
-	// 2. 从FutureGroup中拿出多个Future,不需要自己维护
+	//
+	//1. 主线程在FutureGroup上等待多个任务完成,没有必要自己循环扫描多个Future
+	//
+	//2. 从FutureGroup中拿出多个Future,不需要自己维护
 	ExecuteInGroup(task Task, g *FutureGroup) (*Future, bool)
+	
 	// ExecuteInGroupTimeout 与ExecuteTimeout类似,只是增加了FutureGroup
 	ExecuteInGroupTimeout(task Task, g *FutureGroup, timeout time.Duration) (*Future, bool)
 }

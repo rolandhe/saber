@@ -41,10 +41,14 @@ func newFutureWithGroup(g *FutureGroup) *Future {
 }
 
 // Future 与java类似,提供任务执行结果占位符的能力,持有Future的线程可以调用:
-// 1. Get 等待结果返回,如果已经调用Cancel方法,则err是TaskCancelledError
-// 2. TryGet, 尝试获取返回结果,无论有无结果都立即返回,有则err是nil,无则返回TimeoutError
-// 3. GetTimeout, 待超时的等待,如果超时时间内有结果则err是nil, 无怎返回TimeoutError
-// 4. Cancel, 取消当前任务,执行取消后,任务可以已经被执行,也可能不执行,当前线程可以直接去处理其他事情,无需关心任务的执行结果
+//
+// Get 等待结果返回,如果已经调用Cancel方法,则err是TaskCancelledError
+//
+// TryGet, 尝试获取返回结果,无论有无结果都立即返回,有则err是nil,无则返回TimeoutError
+//
+// GetTimeout, 待超时的等待,如果超时时间内有结果则err是nil, 无怎返回TimeoutError
+//
+// Cancel, 取消当前任务,执行取消后,任务可以已经被执行,也可能不执行,当前线程可以直接去处理其他事情,无需关心任务的执行结果
 type Future struct {
 	ch            chan struct{}
 	result        *taskResult
@@ -113,10 +117,14 @@ func (f *Future) accept(v *taskResult) {
 }
 
 // FutureGroup 用于批量管理任务的组件, 需要同时执行一批任务再等待他们的执行结果的场景可以是FutureGroup, 你可以先设置需要执行任务的个数,然后逐个的加入待执行任务,最后在FutureGroup上等待执行结果.
+//
 // 注意:
-//  1. FutureGroup需要预先知道待执行任务的个数, 这么设计有两个考虑,一是这符合大多数的使用场景,二是相比动态计算任务数底层无需太多的并发安全考虑,性能更好
-//  2. add/Cancel,方法并不是线程安全的,也就是说必须要在一个线程内把所有的任务放入Group, 且在同一个线程内Cancel;Get/GetTimeout/TryGet线程安全的
-//  3. 切记, Group内的任务数必须和预先设定的个数相同,否则永远也无法等到结束
+//
+// 1. FutureGroup需要预先知道待执行任务的个数, 这么设计有两个考虑,一是这符合大多数的使用场景,二是相比动态计算任务数底层无需太多的并发安全考虑,性能更好
+//
+// 2. add/Cancel,方法并不是线程安全的,也就是说必须要在一个线程内把所有的任务放入Group, 且在同一个线程内Cancel;Get/GetTimeout/TryGet线程安全的
+//
+// 3. 切记, Group内的任务数必须和预先设定的个数相同,否则永远也无法等到结束
 type FutureGroup struct {
 	futureGroup []*Future
 	notifier    *CountdownLatch

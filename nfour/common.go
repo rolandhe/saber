@@ -1,3 +1,16 @@
+// tcp network framework
+//
+// Copyright 2023 The saber Authors. All rights reserved.
+
+// Package nfour, tcp 网路工具框架，因为 tcp工作在4层上，所以该包命名为 nfour。包含:
+//
+// 1. 多路复用网络模型实现
+//
+// 2. 单路复用网络模型实现，即 同步request/response模型
+//
+// 3. 基于多路复用的rpc框架
+//
+// 4. json encode的多路复用rpc框架
 package nfour
 
 import (
@@ -25,6 +38,8 @@ type Task struct {
 
 type Working func(task *Task) ([]byte, error)
 type HandleError func(err error) []byte
+
+type ConnReader func(conn net.Conn, buff []byte, expectLen int, notHalt bool) error
 
 func NewSrvConf(working Working, errHandle HandleError, concurrent uint) *SrvConf {
 	return &SrvConf{
@@ -67,7 +82,7 @@ func (conf *SrvConf) GetConcurrent() gocc.Semaphore {
 	return conf.concurrent
 }
 
-func ReadPayload(conn net.Conn, buff []byte, expectLen int, notHalt bool) error {
+func InternalReadPayload(conn net.Conn, buff []byte, expectLen int, notHalt bool) error {
 	l := 0
 	for {
 		n, err := conn.Read(buff)

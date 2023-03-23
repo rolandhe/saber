@@ -125,12 +125,16 @@ func cityHashCrc256Long(s []byte, len uint, seed uint32) ([]uint64, error) {
 	return result, nil
 }
 
+// CityHashCrc256String 计算指定字符串的 256 位hash
+// 256位hash使用 4个 int64 返回
 func CityHashCrc256String(str string) ([]uint64, error) {
 	s := strutil.DetachBytesString(str)
 	length := uint(len(str))
 	return CityHashCrc256(s, length)
 }
 
+// CityHashCrc256 计算指定二进制数组的 256 位hash
+// 256位hash使用 4个 int64 返回
 func CityHashCrc256(s []byte, len uint) ([]uint64, error) {
 	if len >= 240 {
 		return cityHashCrc256Long(s, len, 0)

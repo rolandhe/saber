@@ -1,20 +1,23 @@
-// Package jcomp, compatible with java string.
+// compatible with java string.
 //
 // Copyright 2023 The saber Authors. All rights reserved.
 //
 
+// Package jcomp ,兼容java String属性的工具,包括:
+//
+// 1. java String的Length
+//
+// 2. java String substring方法的功能
+//
+// 3. 转换成兼容java char的数组
+//
+// 4. java  Character类的功能
 package jcomp
 
 import (
 	"errors"
 	"fmt"
 )
-
-// 兼容java String属性的工具,包括:
-// 1. java String的Length
-// 2. java String substring方法的功能
-// 3. 转换成兼容java char的数组
-// 4. java  Character类的功能
 
 const (
 	MinHighSurrogate          = rune(55296)

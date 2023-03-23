@@ -20,14 +20,20 @@ func NewDefaultSemaphore(limit uint) Semaphore {
 type Semaphore interface {
 	// TryAcquire 尝试获取单个信号量,如果当下没有信号量,则直接返回false
 	TryAcquire() bool
+
 	// Acquire 获取单个信号量,如果当前没有信号量,一直阻塞等待,直到获取到位置
 	Acquire()
+
 	// AcquireTimeout 超时获取信号量,如果超时时间内没有信号量则返回false,否则返回true
-	// d == 0 退化成 TryAcquire
-	// d < 0 退出成 Acquire
+	//
+	//d == 0 退化成 TryAcquire
+	//
+	//d < 0 退出成 Acquire
 	AcquireTimeout(d time.Duration) bool
+
 	// Release 释放信号量
 	Release()
+	
 	// TotalTokens 信号量总数
 	TotalTokens() uint
 }

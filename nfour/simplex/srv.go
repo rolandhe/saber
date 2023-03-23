@@ -1,3 +1,6 @@
+// rpc abstraction basing nfour
+// Copyright 2023 The saber Authors. All rights reserved.
+
 package simplex
 
 import (
@@ -32,7 +35,7 @@ func handleConnection(conn net.Conn, conf *nfour.SrvConf) {
 	header := make([]byte, nfour.PayLoadLenBufLength)
 	for {
 		conn.SetReadDeadline(time.Now().Add(conf.IdleTimeout))
-		err := nfour.ReadPayload(conn, header, nfour.PayLoadLenBufLength, true)
+		err := nfour.InternalReadPayload(conn, header, nfour.PayLoadLenBufLength, true)
 		if err != nil {
 			releaseConn(conn)
 			break
@@ -40,7 +43,7 @@ func handleConnection(conn net.Conn, conf *nfour.SrvConf) {
 		l, _ := bytutil.ToInt32(header[:nfour.PayLoadLenBufLength])
 		bodyBuff := make([]byte, l, l)
 		conn.SetReadDeadline(time.Now().Add(conf.ReadTimeout))
-		err = nfour.ReadPayload(conn, bodyBuff, int(l), false)
+		err = nfour.InternalReadPayload(conn, bodyBuff, int(l), false)
 		if err != nil {
 			releaseConn(conn)
 			break

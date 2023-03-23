@@ -1,3 +1,9 @@
+// Golang concurrent tools like java juc.
+//
+// Copyright 2023 The saber Authors. All rights reserved.
+
+// Package crc 通过汇编调用intel _mm_crc32_u64指令来加速crc的计算，
+// 要求机器必须支持SSE42指令
 package crc
 
 import (
@@ -6,7 +12,7 @@ import (
 )
 
 const (
-	cpuid_SSE42 = 1 << 20
+	cpuidSSE42 = 1 << 20
 )
 
 var withSSE42 bool
@@ -26,19 +32,21 @@ func init() {
 }
 
 func _withSSE42() bool {
-	if runtime.GOARCH != "amd64"{
+	if runtime.GOARCH != "amd64" {
 		return false
 	}
 	_, _, ecx1, _ := cpuid(1, 0)
-	return ecx1&cpuid_SSE42 != 0
+	return ecx1&cpuidSSE42 != 0
 }
 
+// Crc32u64  通过 _mm_crc32_u64 指令完成crc算法
 func Crc32u64(a, b uint64) uint64 {
 	var sum uint64
 	_crc32u64(a, b, unsafe.Pointer(&sum))
 	return sum
 }
 
+// WithSSE42 判断当前系统是否支持 SSE42 指令
 func WithSSE42() bool {
 	return withSSE42
 }

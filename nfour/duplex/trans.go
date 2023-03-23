@@ -1,5 +1,4 @@
-// Package nfour, net framework basing tcp, tcp is 4th layer of osi net model
-//
+// net framework basing tcp, tcp is 4th layer of osi net model
 // Copyright 2023 The saber Authors. All rights reserved.
 
 package duplex
@@ -172,7 +171,7 @@ func asyncReader(trans *Trans) {
 			break
 		}
 		trans.conn.SetReadDeadline(time.Now().Add(trans.conf.IdleTimeout))
-		if err := nfour.ReadPayload(trans.conn, header, fullHeaderLength, true); err != nil {
+		if err := nfour.InternalReadPayload(trans.conn, header, fullHeaderLength, true); err != nil {
 			nfour.NFourLogger.Info("%s read header error:%v\n", trans.name, err)
 			trans.Shutdown("reader")
 			break
@@ -181,7 +180,7 @@ func asyncReader(trans *Trans) {
 		bodyBuff := make([]byte, l, l)
 		seqId, err := bytutil.ToUint64(header[nfour.PayLoadLenBufLength:])
 		trans.conn.SetReadDeadline(time.Now().Add(trans.conf.ReadTimeout))
-		err = nfour.ReadPayload(trans.conn, bodyBuff, int(l), false)
+		err = nfour.InternalReadPayload(trans.conn, bodyBuff, int(l), false)
 		if err != nil {
 			nfour.NFourLogger.Info("%s read payload error:%v,need %d bytes\n", trans.name, err, l)
 			trans.Shutdown("reader")

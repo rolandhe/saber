@@ -12,7 +12,6 @@ import (
 	"unsafe"
 )
 
-
 // 判断当前系统的大小端属性
 var littleEndian bool
 
@@ -519,12 +518,14 @@ func CityHash128(s []byte, length uint) *Uint128 {
 	return CityHash128WithSeed(s, length, MakeUint128(k0, k1))
 }
 
+// CityHash128WithSeedString  计算指定 str 字符串的 128位hash， 需要指定 seed
 func CityHash128WithSeedString(str string, seed *Uint128) *Uint128 {
 	s := strutil.DetachBytesString(str)
 	length := uint(len(str))
 	return cityHash128WithSeedCore(s, length, seed)
 }
 
+// CityHash128WithSeed  计算指定 二进制数组的 128位hash， 需要指定 seed
 func CityHash128WithSeed(s []byte, length uint, seed *Uint128) *Uint128 {
 	return cityHash128WithSeedCore(s, length, seed)
 }

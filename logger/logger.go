@@ -19,13 +19,25 @@ const (
 
 // Logger 封装log类似与java slf4j的功能
 type Logger interface {
+	// Debug debug级别的日志输出，fmt.Printf 格式输出
+	// 日志级别必须是 DebugLevel
 	Debug(format string, v ...any)
+
+	// DebugLn debug级别的日志输出，fmt.Println 格式输出
+	// 日志级别必须是 DebugLevel
 	DebugLn(v ...any)
 
+	// Info Info 级别的日志输出，fmt.Printf 格式输出
+	// 日志级别必须是 DebugLevel 或者 InfoLevel
 	Info(format string, v ...any)
+
+	// InfoLn Info 级别的日志输出，fmt.Println 格式输出
+	// 日志级别必须是 DebugLevel 或者 InfoLevel
 	InfoLn(v ...any)
 
+	// Error Error 级别的日志输出，fmt.Printf 格式输出
 	Error(format string, v ...any)
+	// ErrorLn Error 级别的日志输出，fmt.Println 格式输出
 	ErrorLn(v ...any)
 }
 
@@ -35,6 +47,13 @@ func NewDefaultLogger() Logger {
 }
 
 // NewLoggerWithLevel  指定日志级别并生成对应的缺省日志输出实例
+// logLevel 日志级别, 必须是以下枚举之一
+//
+//	DebugLevel
+//
+//	InfoLevel
+//
+//	ErrorLevel
 func NewLoggerWithLevel(logLevel int) Logger {
 	return &defaultLogger{
 		logLevel,

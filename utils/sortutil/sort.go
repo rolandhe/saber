@@ -2,12 +2,31 @@
 //
 // Copyright 2023 The saber Authors. All rights reserved.
 
+// Package sortutil 通用的对象数组快速排序
+// 使用方式
+//
+//  type req struct {
+//	   val    string
+//	   sortId int
+//  }
+//
+//	var data []*req
+//
+//	data = append(data, &req{"a", 3})
+//	data = append(data, &req{"b", 1})
+//	data = append(data, &req{"m", 9})
+//
+//	Cmp[*req](func(p1, p2 **req) bool {
+//		return (*p1).sortId < (*p2).sortId
+//	}).Sort(data)
+//
 package sortutil
 
 import "sort"
 
 // 来自官方文档的例子，很巧妙的使用函数的方法实现类似泛型的排序，妙
 
+// Cmp 比较函数，比较 *T 类型的 p1 是否大于 p2
 type Cmp[T any] func(p1, p2 *T) bool
 
 // Sort is a method on the function type, Cmp, that sorts the argument slice according to the function.

@@ -1,3 +1,4 @@
+// Package utils, daog包使用的工具，现在只包含读取当前goroutine id的工具，未来可能会扩展
 package utils
 
 import (

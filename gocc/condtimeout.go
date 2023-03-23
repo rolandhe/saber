@@ -1,6 +1,4 @@
-// Golang concurrent tools like java juc.
-//
-// Copyright 2023 The saber Authors. All rights reserved.
+// code from https://gist.github.com/zviadm/c234426882bfc8acba88f3503edaaa36#file-cond2-go
 
 package gocc
 
@@ -10,8 +8,6 @@ import (
 	"time"
 	"unsafe"
 )
-
-// code from https://gist.github.com/zviadm/c234426882bfc8acba88f3503edaaa36#file-cond2-go
 
 // Condition 支持wait timeout的同步条件
 type Condition interface {
