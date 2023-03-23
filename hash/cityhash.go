@@ -1,6 +1,9 @@
-// Package hash, Golang concurrent tools like java juc.
+// Golang concurrent tools like java juc.
 //
 // Copyright 2023 The saber Authors. All rights reserved.
+
+// Package hash, 实现常见的hash算法，当前实现 cityhash 算法，未来会扩展其他hash 算法。
+// 当前cityhash 完全移植c++版本的cityhash算法, 由于没有找到对_mm_crc32_u64的支持,所以不支持CityHashCrc256, 后续找到办法后会继续支持
 package hash
 
 import (
@@ -9,7 +12,6 @@ import (
 	"unsafe"
 )
 
-// 移植c++版本的cityhash算法, 由于没有找到对_mm_crc32_u64的支持,所以不支持CityHashCrc256, 后续找到办法后会继续支持
 
 // 判断当前系统的大小端属性
 var littleEndian bool
@@ -27,17 +29,20 @@ func init() {
 	littleEndian = IsLittleEndian()
 }
 
+// Uint128 描述 128位无符号整数，它本质上由两个 uint64组成
 type Uint128 struct {
 	low  uint64
 	high uint64
 }
 
-func MakeUint128(u uint64, v uint64) *Uint128 {
+// MakeUint128 构建一个无符号128位整数对象，需要低位、高位 uint64两个参数
+func MakeUint128(low uint64, high uint64) *Uint128 {
 	return &Uint128{
-		u, v,
+		low, high,
 	}
 }
 
+// IsLittleEndian 判断当前系统的字节序是否是小端
 func IsLittleEndian() bool {
 	n := 0x1234
 	f := *((*byte)(unsafe.Pointer(&n)))
@@ -497,6 +502,7 @@ func cityHash128WithSeedCore(s []byte, length uint, seed *Uint128) *Uint128 {
 		hashLen16(x+w.high, y+v.high))
 }
 
+// CityHash128String 对string算128位的cityhash值
 func CityHash128String(str string) *Uint128 {
 	s := strutil.DetachBytesString(str)
 	length := uint(len(str))
