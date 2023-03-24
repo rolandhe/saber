@@ -15,23 +15,36 @@ import (
 )
 
 var (
-	TaskTimeout   = errors.New("timeout")
-	TransShutdown = errors.New("transport shut down")
+	// ErrTaskTimeout 请求执行超时异常
+	ErrTaskTimeout = errors.New("task execute timeout")
+	// ErrTransShutdown Trans 客户端已经被关闭
+	ErrTransShutdown = errors.New("transport shut down")
 )
 
+// TransConf Trans 客户端配置
 type TransConf struct {
-	ReadTimeout  time.Duration
+	// ReadTimeout 网络读取超时时间
+	ReadTimeout time.Duration
+	// WriteTimeout 网络写出超时
 	WriteTimeout time.Duration
-	IdleTimeout  time.Duration
-	concurrent   gocc.Semaphore
+
+	// IdleTimeout 连接长时间没有读取到数据的超时时间，该超过该时间，系统会输出日志，没有其他的处理，不会中断连接
+	IdleTimeout time.Duration
+	concurrent  gocc.Semaphore
 }
 
+// ReqTimeout 请求超时信息
 type ReqTimeout struct {
-	ReadTimeout    time.Duration
-	WriteTimeout   time.Duration
+	// ReadTimeout 网络读取超时时间
+	ReadTimeout time.Duration
+	// WriteTimeout 网络写出超时
+	WriteTimeout time.Duration
+	// WaitConcurrent 当到达最大并发时，等待执行的超时时间
 	WaitConcurrent time.Duration
 }
 
+// NewTransConf 构建客户端的配置
+// rwTimeout 读写超时，这种情况下，读写超时是相同的
 func NewTransConf(rwTimeout time.Duration, concurrent uint) *TransConf {
 	return &TransConf{
 		ReadTimeout:  rwTimeout,
@@ -41,6 +54,8 @@ func NewTransConf(rwTimeout time.Duration, concurrent uint) *TransConf {
 	}
 }
 
+// NewTrans 构建客户端 Trans
+// name 表示该 Trans的名称，该名称会被输出到日志中，方便发现问题
 func NewTrans(addr string, conf *TransConf, name string) (*Trans, error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
@@ -63,6 +78,8 @@ func NewTrans(addr string, conf *TransConf, name string) (*Trans, error) {
 	return t, nil
 }
 
+// Trans 多路复用模式下的客户端，每个Trans内持有一个连接，并且与服务端类似，由两个goroutine分别负责请求的发出和响应的接收。
+// 使用者通过Trans发送请求到服务端，并返回响应
 type Trans struct {
 	conn     net.Conn
 	conf     *TransConf
@@ -74,6 +91,8 @@ type Trans struct {
 	name     string
 }
 
+// Shutdown 关闭Trans
+// source 发起Shutdown的场景，用于日志记录
 func (t *Trans) Shutdown(source string) {
 	if atomic.CompareAndSwapInt32(&t.status, 0, 1) {
 		nfour.NFourLogger.Info("%s trigger %s shutdown\n", source, t.name)
@@ -81,13 +100,16 @@ func (t *Trans) Shutdown(source string) {
 	}
 }
 
+// IsShutdown Trans是否已经被关闭，如果已经被关闭，将不能接收新的发送请求
 func (t *Trans) IsShutdown() bool {
 	return atomic.LoadInt32(&t.status) == 1
 }
 
+// SendPayload 发送二进制请求
+// reqTimeout 本次请求的超时时间
 func (t *Trans) SendPayload(req []byte, reqTimeout *ReqTimeout) ([]byte, error) {
 	if t.IsShutdown() {
-		return nil, TransShutdown
+		return nil, ErrTransShutdown
 	}
 	if reqTimeout == nil {
 		reqTimeout = &ReqTimeout{}
@@ -102,7 +124,7 @@ func (t *Trans) SendPayload(req []byte, reqTimeout *ReqTimeout) ([]byte, error) 
 		reqTimeout.ReadTimeout = t.conf.ReadTimeout
 	}
 	if t.IsShutdown() {
-		return nil, TransShutdown
+		return nil, ErrTransShutdown
 	}
 	seqId := t.idGen.Add(1)
 	fu := &future{
@@ -116,7 +138,7 @@ func (t *Trans) SendPayload(req []byte, reqTimeout *ReqTimeout) ([]byte, error) 
 		timeout: reqTimeout.WriteTimeout,
 		f:       fu,
 	}
-	return fu.Get(reqTimeout.ReadTimeout)
+	return fu.get(reqTimeout.ReadTimeout)
 }
 
 // asyncSender/asyncReader以及外部都可以调用Shutdown发送关闭指令
@@ -152,7 +174,7 @@ func asyncSender(trans *Trans) {
 		for {
 			select {
 			case task := <-trans.sendCh:
-				task.f.accept(nil, TransShutdown)
+				task.f.accept(nil, ErrTransShutdown)
 				releaseCount++
 			default:
 				nfour.NFourLogger.Info("%s send release not sent task:%d\n", trans.name, releaseCount)
@@ -204,7 +226,7 @@ func asyncReader(trans *Trans) {
 
 	trans.cache.Range(func(key, value any) bool {
 		fu := value.(*future)
-		fu.accept(nil, TransShutdown)
+		fu.accept(nil, ErrTransShutdown)
 		releasedCount++
 		return true
 	})
@@ -226,12 +248,12 @@ type future struct {
 	flag     atomic.Bool
 }
 
-func (f *future) Get(timeout time.Duration) ([]byte, error) {
+func (f *future) get(timeout time.Duration) ([]byte, error) {
 	select {
 	case <-f.notifier:
 		return f.value, f.err
 	case <-time.After(timeout):
-		return nil, TaskTimeout
+		return nil, ErrTaskTimeout
 	}
 }
 

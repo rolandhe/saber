@@ -1,6 +1,8 @@
 // rpc abstraction basing nfour
 // Copyright 2023 The saber Authors. All rights reserved.
 
+// Package simplex 单路模式的服务端实现，类似于http1.1， 大量客户端但每个客户请求较少的场景。每个连接上request/response是同步模式，每个请求必须得到响应以后才能发送另一个请求。
+// 用于兼容一些老的场景，因此该模式下没有提供客户端组件。
 package simplex
 
 import (
@@ -11,6 +13,10 @@ import (
 	"time"
 )
 
+// Startup 启动一个单路服务端,在单路模式下，每个客户端连接对应服务端由一个goroutine服务，且服务是同步模式，每个请求必须被处理且收到响应后才能发送下一个请求，类似http1.1。
+//
+// port 服务监听的端口
+// conf.concurrent 指定了最大并发数
 func Startup(port int, conf *nfour.SrvConf) {
 	ln, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {

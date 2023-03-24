@@ -7,23 +7,23 @@ import (
 )
 
 func main() {
-	//javaLength()
-	getChan()
+	javaLength()
+	//getChan()
 	//quickString()
 }
 
-func getChan() {
-	ch := make(chan int, 2)
-	ch <- 1
-	ch <- 2
-	close(ch)
-	v, c := <-ch
-	fmt.Println(v, c)
-	v, c = <-ch
-	fmt.Println(v, c)
-	v, c = <-ch
-	fmt.Println(v, c)
-}
+//func getChan() {
+//	ch := make(chan int, 2)
+//	ch <- 1
+//	ch <- 2
+//	close(ch)
+//	v, c := <-ch
+//	fmt.Println(v, c)
+//	v, c = <-ch
+//	fmt.Println(v, c)
+//	v, c = <-ch
+//	fmt.Println(v, c)
+//}
 
 func javaLength() {
 	s := "刘德华 andi lou"

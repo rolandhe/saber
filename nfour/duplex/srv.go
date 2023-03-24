@@ -1,6 +1,8 @@
 // net framework basing tcp, tcp is 4th layer of osi net model
 // Copyright 2023 The saber Authors. All rights reserved.
 
+// Package duplex 多路复用模式的4层tcp通信，同时支持服务端和客户端。多路复用可以使用一条tcp连接并发响应多个请求，极少的使用资源。类似于http2.
+// 利用多路复用模式可以利用极少资源实现高性能的网络通信功能。
 package duplex
 
 import (
@@ -13,6 +15,9 @@ import (
 
 const seqIdHeaderLength = 8
 
+// Startup 启动一个多路复用的服务端，在多路复用模式下，每个连接由两个goroutine服务，一个负责读取请求，另一个负责写出响应，但一个读取goroutine可以持续的从连接中读取请求，
+// 而没有必要等待上一个请求完成，多个请求可以并发的被执行，最终这些结果被负责写的goroutine写出。
+// conf.concurrent 指定了最大并发数
 func Startup(port int, conf *nfour.SrvConf) {
 	ln, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
