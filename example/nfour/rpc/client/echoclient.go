@@ -15,26 +15,22 @@ import (
 )
 
 func main() {
-	wait := &sync.WaitGroup{}
-	wait.Add(2)
-	start := time.Now().UnixNano()
-	go func() {
-		nfour.NFourLogger.InfoLn("this is a start")
-		core("a")
-		wait.Done()
-		nfour.NFourLogger.InfoLn("this is a end")
-	}()
-	go func() {
-		nfour.NFourLogger.InfoLn("this is b start")
-		core("b")
-		wait.Done()
-		nfour.NFourLogger.InfoLn("this is b end")
-	}()
+	//wait := &sync.WaitGroup{}
+	//wait.Add(2)
+	//start := time.Now().UnixNano()
+	//go func() {
+	//	core("a")
+	//	wait.Done()
+	//}()
+	//go func() {
+	//	core("b")
+	//	wait.Done()
+	//}()
+	//
+	//wait.Wait()
+	//nfour.NFourLogger.InfoLn("xxxx---", time.Now().UnixNano()-start)
 
-	wait.Wait()
-	nfour.NFourLogger.InfoLn("xxxx---", time.Now().UnixNano()-start)
-
-	//core("single")
+	core("single")
 }
 
 func core(name string) {

@@ -9,9 +9,9 @@ import (
 
 func main() {
 
-	working, router := proto.NewJsonRpcSrvWorking(handler.JsonRpcErrHandler)
+	working, handlerErrFunc, router := proto.NewJsonRpcSrvWorking(handler.JsonRpcErrHandler)
 	handler.RegisterAll(router)
-	conf := nfour.NewSrvConf(working, handler.TransErrHandler, 10000)
+	conf := nfour.NewSrvConf(working, handlerErrFunc, 10000)
 
 	duplex.Startup(11011, conf)
 }

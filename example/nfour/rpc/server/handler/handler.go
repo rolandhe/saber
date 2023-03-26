@@ -28,9 +28,3 @@ func JsonRpcErrHandler(err error, interfaceName any) *proto.JsonProtoRes {
 		Body: body,
 	}
 }
-
-func TransErrHandler(err error) []byte {
-	protoBuf := JsonRpcErrHandler(err, nil)
-	body, _ := json.Marshal(protoBuf)
-	return body
-}

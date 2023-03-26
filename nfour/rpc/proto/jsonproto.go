@@ -40,12 +40,18 @@ import (
 
 // NewJsonRpcSrvWorking 构建duplex层需要的 nfour.WorkingFunc, 编解码基于json实现
 // nfour.WorkingFunc 会被设置到 nfour.SrvConf中
-func NewJsonRpcSrvWorking(errToRes rpc.HandleErrorFunc[JsonProtoRes]) (nfour.WorkingFunc, *rpc.SrvRouter[JsonProtoReq, JsonProtoRes]) {
+func NewJsonRpcSrvWorking(errToRes rpc.HandleErrorFunc[JsonProtoRes]) (nfour.WorkingFunc, nfour.HandleError, *rpc.SrvRouter[JsonProtoReq, JsonProtoRes]) {
 	codec := &jsonSerCodec[JsonProtoReq, JsonProtoRes]{}
 	kExtractor := func(req *JsonProtoReq) any {
 		return req.Key
 	}
-	return rpc.NewRpcWorking[JsonProtoReq, JsonProtoRes](codec, kExtractor, errToRes)
+	heFunc := func(err error) []byte {
+		protoBuf := errToRes(err, nil)
+		body, _ := json.Marshal(protoBuf)
+		return body
+	}
+	wf, router := rpc.NewRpcWorking[JsonProtoReq, JsonProtoRes](codec, kExtractor, errToRes)
+	return wf, heFunc, router
 }
 
 // JsonClient 基于json编解码协议的客户端抽象
