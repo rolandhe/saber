@@ -4,8 +4,25 @@
 // Package proto 协议层运行在rpc与tcp之间，它提供了业务对象与底层二进制之间的转换协议。
 // 当前实现的是json协议。
 // 使用方式：
+//	func JsonRpcErrHandler(err error, interfaceName any) *proto.JsonProtoRes {
+//		ret := &Result[string]{
+//			Code:    500,
+//			Message: err.Error(),
+//		}
 //
-//	  working, router := proto.NewJsonRpcSrvWorking(handler.JsonRpcErrHandler)
+//		method := "can't parse request, so don't know"
+//		if interfaceName != nil {
+//			method = interfaceName.(string)
+//		}
+//
+//		body, _ := json.Marshal(ret)
+//		return &proto.JsonProtoRes{
+//			Key:  method,
+//			Body: body,
+//		}
+//	}
+//
+//	  working,handlerErrFunc, router := proto.NewJsonRpcSrvWorking(JsonRpcErrHandler)
 //
 //	  // 注册方法名称和业务处理函数
 //	  router.Register("rpc.test", func(req *proto.JsonProtoReq) (*proto.JsonProtoRes, error) {
@@ -21,12 +38,9 @@
 //			return res, nil
 //		})
 //
-//	 conf := nfour.NewSrvConf(working, func (err error, interfaceName any) *proto.JsonProtoRes {
-//	       // 处理err
-//	       return &proto.JsonProtoRes {}
-//	  }, 10000)
+//	 conf := nfour.NewSrvConf(working, handlerErrFunc, 10000)
 //
-//		duplex.Startup(11011, conf)
+//	 duplex.Startup(11011, conf)
 package proto
 
 import (
