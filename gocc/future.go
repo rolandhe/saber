@@ -100,10 +100,12 @@ func (f *Future) GetTimeout(d time.Duration) (any, error) {
 		return f.TryGet()
 	}
 
+	timer := time.NewTimer(d)
+	defer timer.Stop()
 	select {
 	case <-f.ch:
 		return f.result.r, f.result.e
-	case <-time.After(d):
+	case <-timer.C:
 		return nil, TimeoutError
 	}
 }

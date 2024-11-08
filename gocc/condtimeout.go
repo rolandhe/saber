@@ -57,9 +57,11 @@ func (c *condTimeout) WaitWithTimeout(t time.Duration) {
 	n := c.NotifyChan()
 	c.locker.Unlock()
 
+	timer := time.NewTimer(t)
+	defer timer.Stop()
 	select {
 	case <-n:
-	case <-time.After(t):
+	case <-timer.C:
 		CcLogger.Info("name:%s,wait with timeout\n", c.name)
 	}
 	c.locker.Lock()

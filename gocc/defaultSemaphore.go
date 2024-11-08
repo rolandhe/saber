@@ -33,7 +33,7 @@ type Semaphore interface {
 
 	// Release 释放信号量
 	Release()
-	
+
 	// TotalTokens 信号量总数
 	TotalTokens() uint
 }
@@ -65,10 +65,12 @@ func (s *semaphoreChan) AcquireTimeout(d time.Duration) bool {
 		return true
 	}
 
+	timer := time.NewTimer(d)
+	defer timer.Stop()
 	select {
 	case s.tokens <- struct{}{}:
 		return true
-	case <-time.After(d):
+	case <-timer.C:
 		return false
 	}
 }

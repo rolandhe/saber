@@ -69,10 +69,12 @@ func (ci *chanBlockingQueue[T]) TryOffer(t T) bool {
 }
 
 func (ci *chanBlockingQueue[T]) OfferTimeout(t T, timeout time.Duration) bool {
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
 	select {
 	case ci.q <- &Elem[T]{&t}:
 		return true
-	case <-time.After(timeout):
+	case <-timer.C:
 		return false
 	}
 }
@@ -91,10 +93,12 @@ func (ci *chanBlockingQueue[T]) TryPull() (*Elem[T], bool) {
 	}
 }
 func (ci *chanBlockingQueue[T]) PullTimeout(timeout time.Duration) (*Elem[T], bool) {
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
 	select {
 	case v := <-ci.q:
 		return v, true
-	case <-time.After(timeout):
+	case <-timer.C:
 		return nil, false
 	}
 }

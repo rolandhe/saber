@@ -146,24 +146,28 @@ func (t *Trans) SendPayload(req []byte, reqTimeout *ReqTimeout) ([]byte, error) 
 // asyncSender识别到连接关闭指令后消除等待结果的任务
 func asyncSender(trans *Trans) {
 	releaseWait := false
-	for {
+	coreFunc := func() {
+		timer := time.NewTimer(trans.conf.IdleTimeout)
+		defer timer.Stop()
 		select {
 		case task := <-trans.sendCh:
 			if !writeCore(task.payload, task.seqId, trans.conn, task.timeout) {
 				nfour.NFourLogger.Info("%s write err,will shutdown\n", trans.name)
 				trans.Shutdown("sender")
 				releaseWait = true
-				break
+			} else {
+				nfour.NFourLogger.Debug("%s send success\n", trans.name)
 			}
-			nfour.NFourLogger.Debug("%s send success\n", trans.name)
 		case <-trans.shutDown:
 			trans.conn.Close()
 			releaseWait = true
 			nfour.NFourLogger.Info("%s get shut down event,shut down\n", trans.name)
-			break
-		case <-time.After(trans.conf.IdleTimeout):
+		case <-timer.C:
 			nfour.NFourLogger.Info("%s wait send task timeout\n", trans.name)
 		}
+	}
+	for {
+		coreFunc()
 		if releaseWait {
 			break
 		}
@@ -249,10 +253,12 @@ type future struct {
 }
 
 func (f *future) get(timeout time.Duration) ([]byte, error) {
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
 	select {
 	case <-f.notifier:
 		return f.value, f.err
-	case <-time.After(timeout):
+	case <-timer.C:
 		return nil, ErrTaskTimeout
 	}
 }
